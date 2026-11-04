@@ -1,0 +1,275 @@
+/* Brainbox Ninja: game logic, screens, scoring and local leaderboard. */
+/* ---------- progress, stored on this device (one profile per nickname) ---------- */
+const ROUNDS=10;
+const cleanNick=s=>String(s||'').replace(/[^\p{L}\p{N} _-]/gu,'').replace(/\s+/g,' ').trim().slice(0,16);
+let ALL={};
+try{ALL=JSON.parse(ls.get('bn-profiles-v2')||'{}')||{}}catch(e){ALL={}}
+if(typeof ALL!=='object'||Array.isArray(ALL))ALL={};
+let NICK=cleanNick(ls.get('bn-nick'));
+let LP={};
+const loadLP=()=>{LP=(NICK&&ALL[NICK])||{};if(NICK&&!ALL[NICK])ALL[NICK]=LP};
+const saveLP=()=>{if(NICK){ALL[NICK]=LP;ls.set('bn-profiles-v2',JSON.stringify(ALL))}};
+loadLP();
+const key=(b,c,l,r)=>b+'_'+c+'_'+l+'_'+r;
+const rec=(b,c,l,r)=>LP[key(b,c,l,r)]||{s:0,p:0,t:0};
+const passedRounds=(b,c,l)=>{let n=0;for(let r=0;r<ROUNDS;r++)if(rec(b,c,l,r).s>=1)n++;return n};
+const levelDone=(b,c,l)=>passedRounds(b,c,l)>=ROUNDS;
+const levelOpen=(b,c,l)=>l===0||levelDone(b,c,l-1);
+const roundOpen=(b,c,l,r)=>levelOpen(b,c,l)&&(r===0||rec(b,c,l,r-1).s>=1);
+function totalsOf(lp){const t={total:0,kids:0,teens:0,adults:0,elders:0};for(const k in lp){const p=+lp[k].p||0;t.total+=p;const b=k.split('_')[0];if(b in t)t[b]+=p}return t}
+const totals=()=>totalsOf(LP);
+const stars=n=>`<span role="img" aria-label="${n} of 3 stars">`+[0,1,2].map(i=>`<span style="--i:${i}" class="${i<n?'on':'off'}">\u2605</span>`).join('')+'</span>';
+
+/* ---------- leaderboard (everyone who has played on this device) ---------- */
+const isMe=e=>e.nick===NICK;
+function ranked(tab){
+  const f=tab==='all'?'total':'p_'+tab;
+  return Object.keys(ALL).map(n=>{const t=totalsOf(ALL[n]);return {nick:n,total:t.total,p_kids:t.kids,p_teens:t.teens,p_adults:t.adults,p_elders:t.elders}})
+    .filter(e=>(+e[f]||0)>0).sort((a,b)=>(+b[f])-(+a[f])||String(a.nick).localeCompare(String(b.nick)));
+}
+const row=(e,i,f)=>`<li class="${isMe(e)?'me':''}"><span class="rk r${i<3?i+1:0}">${i+1}</span><span class="pn">${esc(e.nick||'Ninja')}${isMe(e)?' (you)':''}</span><span class="pt">${(+e[f]||0).toLocaleString('en-NG')}</span></li>`;
+function rows(list,f,lim){
+  const top=list.slice(0,lim),mi=list.findIndex(isMe);
+  let h='<ol class="rows">'+top.map((e,i)=>row(e,i,f)).join('');
+  if(mi>=lim)h+=row(list[mi],mi,f);
+  return h+'</ol>';
+}
+const boardNote=()=>'This board shows players on this device. Hand the phone to a friend and let them play under their own name.';
+function miniBoard(){
+  const list=ranked('all');
+  let h='<div class="mh"><h2 class="sub">Leaderboard</h2><button class="link" data-a="board">See all \u2192</button></div>';
+  h+=list.length?rows(list,'total',3):'<p class="lead">No scores yet. Be the first ninja on the board.</p>';
+  return h;
+}
+
+/* ---------- state ---------- */
+let S={screen:'welcome',from:'home',band:null,cat:null,level:0,round:0,qs:[],i:0,score:0,pts:0,gain:0,totalMs:0,picked:null,memoDone:false,qStart:0,limit:0,rem:0,res:null,tab:'all'};
+const cur=()=>BANDS.find(b=>b.id===S.band);
+const app=document.getElementById('app');
+let tick=null;
+
+const MASCOT=`<svg class="mascot" viewBox="0 0 120 120" role="img" aria-label="Brainbox Ninja mascot"><g class="bob"><circle cx="60" cy="64" r="44" fill="#2A2017"/><rect x="22" y="48" width="76" height="30" rx="15" fill="#F5D9B5"/><g class="eyes"><circle cx="46" cy="63" r="6" fill="#fff"/><circle cx="74" cy="63" r="6" fill="#fff"/><circle cx="47" cy="64" r="3" fill="#2A2017"/><circle cx="75" cy="64" r="3" fill="#2A2017"/></g><rect x="16" y="36" width="88" height="11" rx="5" fill="#D63F2A"/><g class="tail"><path d="M100 41 L118 30 L114 44 L119 56 L100 46Z" fill="#D63F2A"/></g><rect x="50" y="37.5" width="20" height="8" rx="2" fill="#FBF3E6"/><text x="60" y="44.2" font-size="7.5" text-anchor="middle" fill="#2A2017" font-weight="800" font-family="Trebuchet MS,sans-serif">BRAIN</text></g></svg>`;
+
+/* ---------- views ---------- */
+function welcome(){
+  const t=totals();
+  return `<section class="welcome">${MASCOT}<h1 class="wtitle">Brainbox <em>Ninja</em></h1>
+  <p class="wsub">${NICK&&t.total>0?'Welcome back, '+esc(NICK)+'. Ready for another round?':'The timed puzzle game for every age.'}</p>
+  <div class="wfeat"><span>Ages 4 to 60+</span><span>Maths, words, proverbs, riddles</span><span>Beat the clock</span></div>
+  <button class="btn primary big" data-a="start">Start Game</button>
+  <button class="btn" data-a="howto">How to play</button>
+  <button class="link" data-a="board">View the leaderboard</button>
+  <p class="foot">Free to play. No ads and no downloads.</p></section>`;
+}
+function howto(){
+  return `<button class="link" data-a="hback">← Back</button>
+  <header class="top"><h1>How to play</h1><p class="lead">Four quick steps. A round takes about two minutes.</p></header>
+  <ol class="steps">
+   <li><strong>Choose your ninja name</strong><span>This is the name shown on the leaderboard. Tap Surprise me for ideas.</span></li>
+   <li><strong>Pick your age range</strong><span>You get puzzles made for your age: 4–10, 11–17, 18–59 or 60+.</span></li>
+   <li><strong>Choose a puzzle type</strong><span>Maths, words, proverbs, riddles, memory and more. Start at Beginner and work up to Hard.</span></li>
+   <li><strong>Answer before the timer runs out</strong><span>Each round has 10 questions. Tap an answer, or press A to D on a keyboard. Faster correct answers earn bonus points.</span></li>
+  </ol>
+  <section class="panel"><h2 class="sub">Scoring and levels</h2><ul class="rules"><li>Score 6 out of 10 to pass a round and open the next one.</li><li>Every level has 10 rounds. Pass all 10 to unlock the next level.</li><li>Medium levels score 1.5× points and Hard levels score double.</li><li>Your best score in each round counts on the leaderboard.</li></ul></section>
+  <button class="btn primary" data-a="start">Start Game</button>`;
+}
+function home(){
+  const t=totals();
+  return `<button class="link" data-a="welcome">← Title screen</button>
+  <header class="hero">${MASCOT}<div class="top"><h1>Get ready</h1><p class="lead">Pick a ninja name and your age range. <button class="link inline" data-a="howto">How to play</button></p></div></header>
+  <section class="panel"><label for="nick">Your ninja name</label>
+   <div class="row"><input id="nick" maxlength="16" autocomplete="off" placeholder="e.g. SwiftMango42" value="${esc(NICK)}"><button class="btn" type="button" data-a="rand">Surprise me</button></div>
+   <p id="msg" class="msg" role="alert"></p></section>
+  <h2 class="sub">Choose your age range</h2>
+  <div class="grid ages">${BANDS.map(b=>`<button class="card" data-a="band" data-b="${b.id}" style="--c:var(--${b.id});--cbg:var(--${b.id}-bg)"><span class="rng">${b.range}</span><span class="nm">${b.name}</span><span class="bl">${b.blurb}</span><span class="pr">${t[b.id].toLocaleString('en-NG')} pts</span></button>`).join('')}</div>
+  <section id="mini" class="panel">${miniBoard()}</section>
+  <p class="foot">No ads and no videos. Scores save on this device. No sign-up needed.</p>`;
+}
+function cats(){
+  const b=cur();
+  return `<button class="link" data-a="home">← Change age range</button>
+  <header class="top"><span class="chip">Ages ${b.range}</span><h1>${b.name}</h1><p class="lead">Pick a puzzle type. Each has three levels, and every level has ten rounds of ten timed questions.</p></header>
+  <div class="grid cats">${catsFor(b.id).map(c=>{const passed=[0,1,2].reduce((a,l)=>a+passedRounds(b.id,c.id,l),0);
+   return `<button class="card" data-a="cat" data-c="${c.id}"><span class="glyph">${c.glyph}</span><span class="nm">${c.name}</span><span class="bl">${c.blurb}</span><span class="pr">${passed} of ${3*ROUNDS} rounds passed</span></button>`}).join('')}</div>
+  <button class="btn" data-a="board">View leaderboard</button>`;
+}
+function hub(){
+  const b=cur(),c=catOf(b.id,S.cat);
+  return `<button class="link" data-a="cats">← ${b.name}</button>
+  <header class="top"><span class="chip">Ages ${b.range}</span><h1>${c.name}</h1><p class="lead">${c.blurb}</p></header>
+  <ol class="levels">${LEVELS.map((n,i)=>{const open=levelOpen(b.id,S.cat,i),pr=passedRounds(b.id,S.cat,i),st=Array.from({length:ROUNDS},(_,r)=>rec(b.id,S.cat,i,r).s).reduce((x,y)=>x+y,0);
+   const info=open?`${pr} of ${ROUNDS} rounds passed · ${st} of ${ROUNDS*3} stars`:'Pass all '+ROUNDS+' rounds of '+LEVELS[i-1]+' to unlock';
+   return `<li><button class="lvl" data-a="level" data-l="${i}" ${open?'':'disabled'}><span class="ln"><small>Level ${i+1}</small>${n}</span><span class="ls">${open?(levelDone(b.id,S.cat,i)?'Cleared':pr+'/'+ROUNDS):'Locked'}</span><span class="lh">${info}</span></button></li>`}).join('')}</ol>
+  <p class="foot">Each level has ${ROUNDS} rounds of 10 timed questions. Pass a round with 6 out of 10 to open the next one. Hard levels score double.</p>`;
+}
+function rounds(){
+  const b=cur(),c=catOf(b.id,S.cat),l=S.level;
+  let next=0;while(next<ROUNDS-1&&rec(b.id,S.cat,l,next).s>=1)next++;
+  const pr=passedRounds(b.id,S.cat,l);
+  return `<button class="link" data-a="hub">← ${c.name}</button>
+  <header class="top"><span class="chip">${LEVELS[l]} level</span><h1>${pr>=ROUNDS?'Level cleared':'Round '+(next+1)+' is next'}</h1><p class="lead">${pr} of ${ROUNDS} rounds passed. Ten questions per round, ${TL[b.id][l]} seconds each.</p></header>
+  <button class="btn primary" data-a="round" data-r="${next}">${pr>=ROUNDS?'Play a round again':(pr?'Continue with Round '+(next+1):'Start Round 1')}</button>
+  <div class="rgrid">${Array.from({length:ROUNDS},(_,r)=>{const open=roundOpen(b.id,S.cat,l,r),x=rec(b.id,S.cat,l,r);
+   return `<button class="rnd${x.s>=1?' done':''}" data-a="round" data-r="${r}" ${open?'':'disabled'}><span class="rn">${r+1}</span><span class="rs">${open?stars(x.s):'Locked'}</span>${x.p?`<span class="rp">${x.p} pts</span>`:''}</button>`}).join('')}</div>
+  <p class="foot">Pass a round with 6 out of 10 to open the next one. Replay any round to beat your best points.</p>`;
+}
+function play(){
+  const q=S.qs[S.i],N=S.qs.length,done=S.picked!==null;
+  let h=`<div class="topbar"><button class="link" data-a="rounds">← Rounds</button><span class="meta">${LEVELS[S.level]} · Round ${S.round+1} · Time <span id="tclk">${mmss(S.totalMs)}</span></span></div>
+  <div class="prog" role="progressbar" aria-label="Question progress" aria-valuemin="0" aria-valuemax="${N}" aria-valuenow="${S.i+(done?1:0)}">${S.qs.map((_,k)=>`<i class="${k<S.i||(k===S.i&&done)?'done':k===S.i?'now':''}"></i>`).join('')}</div>`;
+  if(q.memo&&!S.memoDone)return h+`<section class="qcard"><p class="qn">Question ${S.i+1} <span>of ${N}</span></p><p class="q">Remember these items. The clock starts when you are ready.</p><p class="show memo">${esc(q.memo)}</p><button class="btn primary" data-a="memodone">I have remembered them</button></section>`;
+  const frac=done?S.rem/S.limit:1;
+  h+=`<div class="timer" aria-label="Time left"><span class="tl">Time left</span><div class="tbarwrap"><div id="tbar" class="${frac<.25?'low':frac<.5?'mid':''}" style="transform:scaleX(${frac})"></div></div><span id="tnum">${Math.ceil((done?S.rem:S.limit)/1000)}s</span></div>`;
+  const short=q.opts.every(o=>o.length<9);
+  h+=`<section class="qcard"><p class="qn">Question ${S.i+1} <span>of ${N}</span></p><p class="q">${q.q}</p>${q.show?`<p class="show">${esc(q.show)}</p>`:''}
+  <div class="opts${short?' two':''}" role="group" aria-label="Answer choices">${q.opts.map((o,k)=>{let c='opt',m='ABCD'[k];if(done){if(k===q.ans){c+=' good';m='✓'}else if(k===S.picked){c+=' bad';m='✗'}}
+   return `<button class="${c}" data-a="pick" data-k="${k}" ${done?'disabled':''}><span class="key">${m}</span><span class="ot">${esc(o)}</span></button>`}).join('')}</div>`;
+  if(!done)h+='<p class="hint">Tip: press A to D, or 1 to 4, to answer.</p>';
+  if(done){
+    const ok=S.picked===q.ans,to=S.picked===-1;
+    h+=`<div class="fb ${ok?'good':'bad'}" role="status"><strong>${ok?'Correct! +'+S.gain+' pts':to?'Time is up.':'Not quite.'}</strong> ${ok?'':'The answer is '+esc(q.opts[q.ans])+'. '}${esc(q.why||'')}</div>
+    <button class="btn primary" id="nextbtn" data-a="next">${S.i===N-1?'See my score':'Next question'}</button>`;
+  }
+  return h+'</section>';
+}
+function confetti(){const cols=['var(--red)','var(--gold)','var(--good)','var(--teens)'];return Array.from({length:30},(_,i)=>`<i class="cf" style="left:${rnd(2,96)}%;background:${cols[i%4]};--d:${(Math.random()*.9).toFixed(2)}s"></i>`).join('')}
+const SHOUTS=['You are brilliant!','Great!','Awesome!','Fantastic!','Well done, ninja!','Superb!','Brilliant!','Outstanding!','Ninja skills!','Excellent!'];
+const PERFECT=['Flawless!','Perfect round!','You are a legend!','Total genius!'];
+const TRY=['Good try!','So close!','Keep going, ninja!','Nearly there!'];
+const CLEARED=['Level cleared!','Champion!','Master of this level!'];
+const TIPS={count:'Touch each fruit once as you count so you do not count it twice.',sums:'Count on from the bigger number. For 7 + 2, start at 7 and count 8, 9.',patterns:'Say the pattern out loud, then say what comes next.',odd:'Name each item. The one that does not fit the group is your answer.',skip:'Say the whole count out loud: 5, 10, 15 and keep the beat going.',maths:'Break big numbers into tens and ones. For 38 + 27, add 30 + 20, then 8 + 7.',seq:'Look at the gaps between the numbers. If the gaps grow, the rule is changing.',words:'Look for familiar endings and beginnings, then try the first letter.',proverbs:'Think about the lesson first. The missing word usually carries it.',riddles:'Read the riddle twice. The answer often hides in plain words.',money:'Round to the nearest ₦100 first, then adjust for the exact amount.',memory:'Group the items into pairs or picture a market stall. Linking them helps you recall.',numbers:'Take it slowly. For change, count up from the price to the amount paid.',mix:'Answer in the first half of the timer to earn the biggest speed bonus.'};
+function suggestions(){
+  const b=cur(),r=S.res,out=[];
+  const passedN=c=>[0,1,2].reduce((a,l)=>a+passedRounds(b.id,c.id,l),0);
+  const fresh=catsFor(b.id).filter(c=>c.id!=='mix'&&c.id!==S.cat).sort((x,y)=>passedN(x)-passedN(y)||Math.random()-.5)[0];
+  if(fresh)out.push({a:'cat',c:fresh.id,t:'Try '+fresh.name,d:(passedN(fresh)?passedN(fresh)+' of '+3*ROUNDS+' rounds passed. ':'New for you. ')+fresh.blurb});
+  if(r.pass&&S.cat!=='mix')out.push({a:'cat',c:'mix',t:'Play Mix It Up',d:'A bit of everything from this age range.'});
+  const bi=BANDS.findIndex(x=>x.id===b.id),nb=BANDS[bi+1]||BANDS[bi-1];
+  out.push({a:'band',bb:nb.id,t:'Peek at the '+nb.range+' puzzles',d:nb.name+': '+nb.blurb});
+  return out.slice(0,3);
+}
+const ring=(score,n,pass)=>{const C=2*Math.PI*52;return `<div class="ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="rtrack" cx="60" cy="60" r="52"/><circle class="rfill${pass?'':' fail'}" cx="60" cy="60" r="52" style="--c2:${C.toFixed(1)};--off:${(C*(1-score/n)).toFixed(1)}"/></svg><div class="rtxt"><b>${score}</b><span>out of ${n}</span></div></div>`};
+function result(){
+  const r=S.res,tip=TIPS[S.cat]||TIPS.mix,acc=Math.round(100*r.score/r.n);
+  const msg=r.cleared?(S.level===2?'You cleared every level of this puzzle type.':'You passed all '+ROUNDS+' rounds. The next level is open.'):r.pass?'Round '+(r.round+1)+' passed. Round '+(r.round+2)+' is open.':'You need 6 out of 10 to pass. Try again with fresh questions.';
+  let primary;
+  if(r.cleared&&S.level<2)primary=`<button class="btn primary" data-a="nextlevel">Next level: ${LEVELS[S.level+1]}</button>`;
+  else if(r.cleared)primary='<button class="btn primary" data-a="cats">Pick another puzzle type</button>';
+  else if(r.pass)primary=`<button class="btn primary" data-a="nextround">Next round (Round ${r.round+2})</button>`;
+  else primary='<button class="btn primary" data-a="again">Play Again</button>';
+  const again=r.pass?'<button class="btn" data-a="again">Play Again</button>':'';
+  return `<section class="res">${r.pass?confetti():''}<p class="shout${r.pass?'':' soft'}">${esc(r.shout)}</p><span class="chip">${LEVELS[S.level]} · Round ${r.round+1} of ${ROUNDS}</span>${ring(r.score,r.n,r.pass)}<p class="ss">${stars(r.stars)}</p>
+  <div class="stats"><div class="stat"><b>+${r.pts}</b><span>points${r.newBest?' · new best':''}</span></div><div class="stat"><b>${mmss(r.ms)}</b><span>round time</span></div><div class="stat"><b>${acc}%</b><span>correct</span></div></div>
+  <p class="lead">${msg} ${r.passed} of ${ROUNDS} rounds passed in this level.</p>
+  <div class="stack">${primary}${again}</div>
+  <div class="tip"><strong>Pointer:</strong> ${esc(tip)}</div>
+  <h2 class="sub">What next?</h2>
+  <div class="stack">${suggestions().map(x=>`<button class="sugg" data-a="${x.a}"${x.c?` data-c="${x.c}"`:''}${x.bb?` data-b="${x.bb}"`:''}><strong>${esc(x.t)}</strong><span>${esc(x.d)}</span></button>`).join('')}</div>
+  <div class="navrow"><button class="btn" data-a="rounds">All rounds</button><button class="btn" data-a="cats">Puzzle types</button><button class="btn" data-a="home">Age range</button><button class="btn" data-a="board">Leaderboard</button></div></section>`;
+}
+const TABS=[['all','Overall'],['kids','4–10'],['teens','11–17'],['adults','18–59'],['elders','60+']];
+function boardView(){
+  const f=S.tab==='all'?'total':'p_'+S.tab,list=ranked(S.tab),mi=list.findIndex(isMe),n=boardNote();
+  let chase;
+  if(mi>=0){const me=list[mi],up=list[mi-1],dn=list[mi+1];
+    chase=`<p class="chase"><strong>You are #${mi+1}.</strong> ${up?`${esc(up.nick)} is ${(+up[f])-(+me[f])} pts ahead of you. Catch up!`:'You are in front. Keep going!'} ${dn?`${esc(dn.nick)} is ${(+me[f])-(+dn[f])} pts behind you.`:''}</p>`}
+  else chase=`<p class="chase">Play a round ${S.tab==='all'?'':'in this age range '}to join the board.</p>`;
+  return `<button class="link" data-a="back">← Back</button>
+  <header class="top"><h1>Leaderboard</h1><p class="lead">Points come from correct answers, speed and level. Your best score in each round counts.</p></header>
+  <div class="tabs" role="group" aria-label="Leaderboard view">${TABS.map(([id,l])=>`<button class="tab" data-a="tab" data-t="${id}" aria-pressed="${S.tab===id}">${l}</button>`).join('')}</div>
+  ${chase}${list.length?rows(list,f,20):'<p class="lead">Nobody here yet.</p>'}${n?`<p class="note">${esc(n)}</p>`:''}`;
+}
+function render(){
+  const b=S.band&&['cats','hub','rounds','play','result'].includes(S.screen)?cur():null;
+  app.className='app'+(b&&b.cls?' '+b.cls:'');
+  app.setAttribute('style',b?`--c:var(--${b.id});--cbg:var(--${b.id}-bg)`:'');
+  app.innerHTML=({welcome,howto,home,cats,hub,rounds,play,result,board:boardView})[S.screen]();
+  const nb=document.getElementById('nextbtn');if(nb)nb.focus();
+}
+function enter(){app.classList.remove('enter');void app.offsetWidth;app.classList.add('enter')}
+function go(s){if(s!=='play')clearInterval(tick);if(s==='board'&&S.screen!=='board')S.from=S.screen;if(s==='howto'&&S.screen!=='howto')S.hfrom=S.screen;S.screen=s;render();enter();window.scrollTo(0,0)}
+
+/* ---------- timed round ---------- */
+function startQ(){S.qStart=Date.now();S.limit=TL[S.band][S.level]*1000;clearInterval(tick);tick=setInterval(onTick,100)}
+function onTick(){
+  if(S.screen!=='play'||S.picked!==null){clearInterval(tick);return}
+  const used=Date.now()-S.qStart,rem=S.limit-used,bar=document.getElementById('tbar'),num=document.getElementById('tnum'),clk=document.getElementById('tclk');
+  if(rem<=0){answer(-1);return}
+  if(bar){const f=rem/S.limit;bar.style.transform=`scaleX(${f})`;bar.classList.toggle('low',f<.25);bar.classList.toggle('mid',f>=.25&&f<.5)}
+  if(num)num.textContent=Math.ceil(rem/1000)+'s';
+  if(clk)clk.textContent=mmss(S.totalMs+used);
+}
+function answer(k){
+  if(S.picked!==null)return;
+  clearInterval(tick);
+  const q=S.qs[S.i],used=Math.min(S.limit,Date.now()-S.qStart);
+  S.totalMs+=used;S.rem=Math.max(0,S.limit-used);S.picked=k;S.gain=0;
+  if(k===q.ans){S.score++;S.gain=10+Math.floor(5*S.rem/S.limit);S.pts+=S.gain}
+  render();
+}
+function startRound(){
+  S.qs=build(S.band,S.cat,S.level);S.i=0;S.score=0;S.pts=0;S.totalMs=0;S.picked=null;S.memoDone=false;
+  go('play');if(!S.qs[0].memo)startQ();
+}
+function finish(){
+  const n=S.qs.length,ratio=S.score/n,pass=S.score>=Math.ceil(n*.6),st=ratio>=.9?3:ratio>=.8?2:ratio>=.6?1:0,pts=Math.round(S.pts*MULT[S.level]);
+  const k=key(S.band,S.cat,S.level,S.round),old=LP[k]||{s:0,p:0,t:0};
+  LP[k]={s:Math.max(old.s,st),p:Math.max(old.p,pts),t:pass&&(!old.t||S.totalMs<old.t)?S.totalMs:old.t};
+  saveLP();
+  S.res={score:S.score,n,pts,ms:S.totalMs,stars:st,pass,newBest:pts>old.p,round:S.round,cleared:pass&&levelDone(S.band,S.cat,S.level),passed:passedRounds(S.band,S.cat,S.level)};
+  S.res.shout=S.res.cleared?pick(CLEARED):pass?pick(st===3?PERFECT:SHOUTS):pick(TRY);
+  go('result');
+}
+
+/* ---------- events ---------- */
+const ADJ=['Swift','Clever','Sharp','Brave','Calm','Quick','Bold','Silent','Lucky','Mighty','Wise','Zesty'],NOUN=['Mango','Jollof','Falcon','Panther','Danfo','Eagle','Suya','Tiger','Drum','Cobra','Baobab','Comet'];
+app.addEventListener('input',e=>{
+  if(e.target.id==='nick'){NICK=cleanNick(e.target.value);ls.set('bn-nick',NICK)}
+});
+app.addEventListener('click',e=>{
+  const t=e.target.closest('[data-a]');if(!t)return;
+  const a=t.dataset.a;
+  if(a==='rand'){NICK=cleanNick(pick(ADJ)+pick(NOUN)+rnd(1,99));ls.set('bn-nick',NICK);const i=document.getElementById('nick');if(i)i.value=NICK;const m=document.getElementById('msg');if(m)m.textContent=''}
+  else if(a==='band'){
+    if(NICK.length<2){const m=document.getElementById('msg'),i=document.getElementById('nick');if(m)m.textContent='Pick a ninja name first. Use at least 2 letters, or tap Surprise me.';if(i)i.focus();return}
+    S.band=t.dataset.b;loadLP();go('cats');
+  }
+  else if(a==='start')go('home');
+  else if(a==='welcome')go('welcome');
+  else if(a==='howto')go('howto');
+  else if(a==='hback')go(S.hfrom&&S.hfrom!=='howto'?S.hfrom:'welcome');
+  else if(a==='home'){S.band=null;go('home')}
+  else if(a==='cats')go('cats');
+  else if(a==='cat'){S.cat=t.dataset.c;go('hub')}
+  else if(a==='hub')go('hub');
+  else if(a==='level'){S.level=+t.dataset.l;go('rounds')}
+  else if(a==='rounds')go('rounds');
+  else if(a==='round'){S.round=+t.dataset.r;startRound()}
+  else if(a==='nextround'){S.round++;startRound()}
+  else if(a==='again')startRound();
+  else if(a==='nextlevel'){S.level++;S.round=0;startRound()}
+  else if(a==='memodone'){S.memoDone=true;render();startQ()}
+  else if(a==='pick')answer(+t.dataset.k);
+  else if(a==='next'){
+    if(S.i===S.qs.length-1)finish();
+    else{S.i++;S.picked=null;S.memoDone=false;render();enter();window.scrollTo(0,0);if(!S.qs[S.i].memo)startQ()}
+  }
+  else if(a==='board')go('board');
+  else if(a==='tab'){S.tab=t.dataset.t;render()}
+  else if(a==='back')go(S.from&&S.from!=='board'?S.from:'home');
+});
+
+document.addEventListener('keydown',e=>{
+  if(S.screen!=='play'||e.ctrlKey||e.metaKey||e.altKey)return;
+  const q=S.qs[S.i];if(!q||(q.memo&&!S.memoDone)||S.picked!==null)return;
+  const k=Math.max('abcd'.indexOf(e.key.toLowerCase()),['1','2','3','4'].indexOf(e.key));
+  if(k>=0&&k<q.opts.length)answer(k);
+});
+
+/* ---------- drifting background glyphs ---------- */
+(function(){
+  const bg=document.getElementById('bg'),g=['+','×','÷','?','=','7','3','Aa','π','%','2','9','−','?','5','₦'];
+  bg.innerHTML=g.map((c,i)=>`<span style="--x:${(i*37+8)%94}%;--y:${(i*53+6)%92}%;--s:${rnd(30,64)}px;--t:${rnd(14,26)}s;--dl:-${rnd(0,14)}s;--r0:${rnd(-25,25)}deg;--r1:${rnd(-40,40)}deg;--dx:${rnd(-40,40)}px;--dy:${rnd(-60,60)}px">${esc(c)}</span>`).join('');
+})();
+
+render();
