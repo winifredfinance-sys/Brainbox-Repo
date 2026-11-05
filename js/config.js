@@ -10,6 +10,6 @@
    While the placeholders are still here, the game works normally and the leaderboard
    shows "not switched on yet". */
 window.BN_SUPABASE = {
-  url: 'https://YOUR-PROJECT-REF.supabase.co',
-  key: 'sb_publishable_YOUR-KEY-HERE'
+  url: 'https://bfsrrbxsgktmrpfepxrk.supabase.co',
+  key: 'sb_publishable__RUdC-7SPWAC8e0yaQswmA_tNy9_e9I'
 };

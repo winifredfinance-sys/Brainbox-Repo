@@ -252,10 +252,12 @@ function answer(k){
   render();
 }
 function startRound(){
+  S.live=true; /* set when a round starts; finish() clears it so one round is scored and sent only once */
   S.adj=adaptAdj();S.qs=build(S.band,S.cat,S.level,S.adj);S.i=0;S.score=0;S.pts=0;S.totalMs=0;S.picked=null;S.memoDone=false;
   go('play');if(!S.qs[0].memo)startQ();
 }
 function finish(){
+  if(!S.live)return;S.live=false;
   const n=S.qs.length,ratio=S.score/n,pass=S.score>=Math.ceil(n*.6),st=ratio>=.9?3:ratio>=.8?2:ratio>=.6?1:0,pts=Math.round(S.pts*MULT[S.level]);
   const k=key(S.band,S.cat,S.level,S.round),old=LP[k]||{s:0,p:0,t:0};
   LP[k]={s:Math.max(old.s,st),p:Math.max(old.p,pts),t:pass&&(!old.t||S.totalMs<old.t)?S.totalMs:old.t};
