@@ -71,6 +71,10 @@ Rounds 1–3 use the easier half of a level's question types, rounds 4–7 mix a
 
 `node tests/ramp-sim.js` simulates players on every age band, puzzle type and level and prints the pass rate per round. It is a model, not player data: about 81% at Round 1 and 73% at Round 10 with the default player.
 
+## Naira Maths (18–59)
+
+Multi-step money questions with everyday Lagos amounts. Beginner: market baskets (2 items with quantities), change from ₦5,000–₦50,000 notes, best buy per unit, simple discounts. Medium: 3-item baskets, 7.5% VAT, simple interest, splitting a bill with a tip, percentage price change, profit and loss. Hard: profit as a % of cost, price before a discount, a rise then a fall, 2-year compound interest, instalments after a deposit, break-even sales. Wrong answers are the common slips (dividing by the selling price, adding the % back on, forgetting the deposit). The generators are at the end of `js/bank.js`; 60+ Number Puzzles keep the gentler change and discount questions.
+
 ## Daily challenge and streak
 
 Each day (Lagos time) players have a points target for their age range: 4–10: 150, 11–17: 300, 18–59: 300, 60+: 200 (`DAILY` in `js/content.js`). Every finished round's points count, replays included. The target used is the one for the age range played most recently. Progress ("180 / 300 points today") shows on the home and results screens, with a celebration when it is reached. Reaching the target on consecutive days builds a streak; missing a day resets it. Progress and streaks are stored per ninja name on the device (`bn-daily-v1`). Reaching the target sends a `daily_target_hit` stats event, shown in section 9 of the dashboard.

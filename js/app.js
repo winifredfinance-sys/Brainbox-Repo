@@ -217,7 +217,7 @@ function play(){
   if(q.memo&&!S.memoDone)return h+`<section class="qcard"><p class="qn">Question ${S.i+1} <span>of ${N}</span></p><p class="q">Remember these items. The clock starts when you are ready.</p><p class="show memo">${esc(q.memo)}</p><button class="btn primary" data-a="memodone">I have remembered them</button></section>`;
   const frac=done?S.rem/S.limit:1;
   h+=`<div class="timer" aria-label="Time left"><span class="tl">Time left</span><div class="tbarwrap"><div id="tbar" class="${frac<.25?'low':frac<.5?'mid':''}" style="transform:scaleX(${frac})"></div></div><span id="tnum">${Math.ceil((done?S.rem:S.limit)/1000)}s</span><span id="tpts" class="tpts" aria-label="Points for a right answer now">${done?'':ptsFor(1,1,S.level)+' pts'}</span></div>`;
-  const short=q.opts.every(o=>o.length<9);
+  const short=q.opts.every(o=>o.length<9);  /* render() falls back to one column if an answer does not fit */
   h+=`<section class="qcard"><p class="qn">Question ${S.i+1} <span>of ${N}</span></p><p class="q">${q.q}</p>${q.show?`<p class="show">${esc(q.show)}</p>`:''}
   <div class="opts${short?' two':''}" role="group" aria-label="Answer choices">${q.opts.map((o,k)=>{let c='opt',m='ABCD'[k];if(done){if(k===q.ans){c+=' good';m='✓'}else if(k===S.picked){c+=' bad';m='✗'}}
    return `<button class="${c}" data-a="pick" data-k="${k}" ${done?'disabled':''}><span class="key">${m}</span><span class="ot">${esc(o)}</span></button>`}).join('')}</div>`;
@@ -234,7 +234,7 @@ const SHOUTS=['You are brilliant!','Great!','Awesome!','Fantastic!','Well done, 
 const PERFECT=['Flawless!','Perfect round!','You are a legend!','Total genius!'];
 const TRY=['Good try!','So close!','Keep going, ninja!','Nearly there!'];
 const CLEARED=['Level cleared!','Champion!','Master of this level!'];
-const TIPS={count:'Touch each fruit once as you count so you do not count it twice.',sums:'Count on from the bigger number. For 7 + 2, start at 7 and count 8, 9.',patterns:'Say the pattern out loud, then say what comes next.',odd:'Name each item. The one that does not fit the group is your answer.',skip:'Say the whole count out loud: 5, 10, 15 and keep the beat going.',maths:'Break big numbers into tens and ones. For 38 + 27, add 30 + 20, then 8 + 7.',seq:'Look at the gaps between the numbers. If the gaps grow, the rule is changing.',words:'Look for familiar endings and beginnings, then try the first letter.',proverbs:'Think about the lesson first. The missing word usually carries it.',riddles:'Read the riddle twice. The answer often hides in plain words.',money:'Round to the nearest ₦100 first, then adjust for the exact amount.',memory:'Group the items into pairs or picture a market stall. Linking them helps you recall.',numbers:'Take it slowly. For change, count up from the price to the amount paid.',mix:'Answer in the first half of the timer to earn the biggest speed bonus.'};
+const TIPS={count:'Touch each fruit once as you count so you do not count it twice.',sums:'Count on from the bigger number. For 7 + 2, start at 7 and count 8, 9.',patterns:'Say the pattern out loud, then say what comes next.',odd:'Name each item. The one that does not fit the group is your answer.',skip:'Say the whole count out loud: 5, 10, 15 and keep the beat going.',maths:'Break big numbers into tens and ones. For 38 + 27, add 30 + 20, then 8 + 7.',seq:'Look at the gaps between the numbers. If the gaps grow, the rule is changing.',words:'Look for familiar endings and beginnings, then try the first letter.',proverbs:'Think about the lesson first. The missing word usually carries it.',riddles:'Read the riddle twice. The answer often hides in plain words.',money:'Work in steps: the total first, then the change. For a percentage, find 10% first and build from it.',memory:'Group the items into pairs or picture a market stall. Linking them helps you recall.',numbers:'Take it slowly. For change, count up from the price to the amount paid.',mix:'Answer in the first half of the timer to earn the biggest speed bonus.'};
 function suggestions(){
   const b=cur(),r=S.res,out=[];
   const passedN=c=>[0,1,2].reduce((a,l)=>a+passedRounds(b.id,c.id,l),0);
@@ -281,6 +281,8 @@ function render(){
   app.className='app'+(b&&b.cls?' '+b.cls:'');
   app.setAttribute('style',b?`--c:var(--${b.id});--cbg:var(--${b.id}-bg)`:'');
   app.innerHTML=({welcome,howto,home,cats,hub,rounds,ready,play,result,board:boardView})[S.screen]();
+  /* two answer columns only if every answer fits on one line (long ₦ amounts on narrow phones get one column) */
+  const two=app.querySelector('.opts.two');if(two&&[...two.querySelectorAll('.opt')].some(o=>o.scrollWidth>o.clientWidth+1))two.classList.remove('two');
   const nb=document.getElementById('nextbtn');if(nb)nb.focus();
 }
 function enter(){app.classList.remove('enter');void app.offsetWidth;app.classList.add('enter')}

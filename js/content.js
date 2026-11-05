@@ -206,7 +206,7 @@ const DIFF={
  pattern:k=>({AB:1,AAB:2,ABB:2,AABB:3,ABC:3})[k]||2,skip:SKIPD,missing:s=>SKIPD(s)+1,back:s=>SKIPD(s)+1,oddOne:lv=>lv,
  mult:(lo,hi)=>1+hi/8,bigAdd:(lo,hi)=>1+Math.log10(hi),bigSub:(lo,hi)=>1.5+Math.log10(hi),percent:ps=>ps.some(p=>p%10&&p!==25)?3.5:ps.some(p=>p!==10&&p!==50)?3:2,
  algebra:()=>4,avg:()=>4,seqA:st=>st.some(x=>x>8)?2.5:2,seqGrow:()=>3,seqGeo:()=>3,seqFib:()=>4,seqSq:()=>4.5,
- scramble:(lo,hi)=>1.5+hi/4,missingLetter:(lo,hi)=>1+hi/4,change:p=>2+(p>=2000?1:p>=1000?.5:0),discount:ps=>ps&&ps.some(p=>p%5)?3.5:3,
+ scramble:(lo,hi)=>1.5+hi/4,missingLetter:(lo,hi)=>1+hi/4,change:p=>2+(p>=2000?1:p>=1000?.5:0),discount:ps=>ps&&ps.some(p=>p%10&&p!==25)?3.5:2.5,
  profit:()=>4,loss:()=>4,logic:(lo,hi)=>hi+.5,riddle:(lo,hi)=>hi,proverb:lv=>lv,proverbRev:lv=>lv+.5,memory:n=>n/2,
  order:lv=>lv+1,day:()=>2.5,age:()=>3,share:()=>2.5,ratio:()=>4
 };

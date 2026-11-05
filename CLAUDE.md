@@ -21,7 +21,7 @@ Free, timed puzzle game for Nigerian players aged 4 to 60+, built to give every 
 ## Files
 - `index.html` loads `css/style.css`, then `js/content.js`, `js/bank.js`, `js/config.js`, `js/online.js`, `js/track.js`, `js/app.js` (order matters).
 - `js/content.js`: helpers (`ls`, `esc`, `rnd`…), question lists, generators `G`, `BANDS`, `CATS`, `TL`, `MULT`, `build()`; avoids repeats via `bn-seen-v1`.
-- `js/bank.js`: extra content pushed into the lists above.
+- `js/bank.js`: extra content pushed into the lists above. Also defines Naira Maths (18–59 `money`) from Nov 2026: multi-step generators `nBasket`, `nChange`, `nUnit`, `nVat` (7.5%), `nInterest`, `nSplit`, `nPct`, `nProfitPct`, `nReverse`, `nSuccessive`, `nCompound`, `nInstal`, `nBreakEven`. 60+ Number Puzzles keep the gentle `change`/`discount`.
 - `js/config.js`: Supabase project URL and publishable key (`window.BN_SUPABASE`).
 - `js/online.js`: `NET`, the global leaderboard (anonymous sign-in, score upload, top 50).
 - `js/track.js`: `TRACK`, the anonymous gameplay stats. Plain `fetch` to `/rest/v1/events`, batched, capped queue `bn-q-v1` (200), round-in-progress marker `bn-live-v1`, retries with backoff.

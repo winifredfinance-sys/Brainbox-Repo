@@ -228,3 +228,4 @@ html[data-pal="candy"]{
 .ready .btn{width:100%}
 .tpts{min-width:4.6em;text-align:right;font-weight:800;color:var(--good);font-variant-numeric:tabular-nums;white-space:nowrap}
 .nw{white-space:nowrap}
+.opts.two .ot{overflow-wrap:normal;word-break:keep-all}
