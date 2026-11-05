@@ -60,9 +60,29 @@
     const changed=st.email!==u.email;st.email=u.email||'';
     if(changed||(!st.data&&!st.loading))load();
   }
+  const okEmail=e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+  async function signInPw(email,pw){
+    email=String(email||'').trim().toLowerCase();st.formEmail=email;
+    if(!okEmail(email)){st.msg='Enter a valid email address.';render();return}
+    if(!pw){st.msg='Enter your password, or use “Email me a sign-in link instead”.';render();return}
+    st.msg='Signing in…';render();
+    let r;
+    try{r=await within(client().auth.signInWithPassword({email,password:pw}),15000)}
+    catch(e){r={error:e}}
+    if(r.error){
+      const m=String(r.error.message||r.error);
+      st.msg=/invalid login credentials/i.test(m)?'Wrong email or password.'
+            :/not confirmed/i.test(m)?'This email is not confirmed yet. In Supabase, open Authentication → Users and confirm the user.'
+            :/rate|too many/i.test(m)?'Too many attempts. Wait a few minutes and try again.'
+            :'Could not sign in: '+m;
+      render();return;
+    }
+    st.msg='';  /* the sign-in event loads the dashboard (or shows "Not an admin") */
+  }
   async function sendLink(email){
-    email=String(email||'').trim().toLowerCase();
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){st.msg='Enter a valid email address.';render();return}
+    email=String(email||'').trim().toLowerCase();st.formEmail=email;
+    if(!okEmail(email)){st.msg='Enter a valid email address.';render();return}
+    if(location.protocol==='file:'){st.msg='Email links cannot return to a file on your computer. Use your password, or open this page from your website.';render();return}
     st.msg='Sending…';render();
     let r;
     try{r=await within(client().auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:location.origin+location.pathname}}),15000)}
@@ -94,10 +114,15 @@
     return `<header class="adm-top"><div><p class="eyebrow">Brainbox Ninja</p><h1>Player stats</h1></div>${st.email?`<div class="who"><span>${esc(st.email)}</span><button class="link" data-a="signout">Sign out</button></div>`:''}</header>${dash?filters():''}${body}`;
   }
   function loginView(){
-    if(location.protocol==='file:')return '<section class="sec login"><h2>Open this page from a web address</h2><p>Email sign-in links cannot return to a file on your computer. Open <code>/admin</code> on your Vercel site, or serve the folder (for example <code>python -m http.server 8000</code>) and open <code>http://localhost:8000/admin.html</code>.</p></section>';
-    if(st.view==='sent')return `<section class="sec login"><h2>Check your email</h2><p>We sent a sign-in link to <strong>${esc(st.sentTo)}</strong>. Open it on this device. The link works once and expires after an hour.</p><button class="link" data-a="again">Use a different email</button></section>`;
+    if(st.view==='sent')return `<section class="sec login"><h2>Check your email</h2><p>We sent a sign-in link to <strong>${esc(st.sentTo)}</strong>. Open it on this device. The link works once and expires after an hour.</p><button class="link" data-a="again">Back to sign-in</button></section>`;
+    const file=location.protocol==='file:';
     return `<section class="sec login"><h2>Admin sign-in</h2><p class="muted">For the game’s owners only. Players never sign in here.</p>
-      <form id="login" class="lform"><label for="email">Email</label><input id="email" type="email" autocomplete="email" required placeholder="you@example.com"><button class="btn primary" type="submit">Email me a sign-in link</button></form>
+      <form id="login" class="lform" novalidate>
+        <label for="email">Email</label><input id="email" name="email" type="email" autocomplete="username email" required placeholder="you@example.com" value="${esc(st.formEmail||'')}">
+        <label for="pw">Password</label><input id="pw" name="password" type="password" autocomplete="current-password" placeholder="Your admin password">
+        <button class="btn primary" type="submit">Sign in</button>
+        ${file?'<p class="muted note-s">Email links need the page to be opened from a web address, so only password sign-in works from a file.</p>':'<div class="or" aria-hidden="true"><span>or</span></div><button class="btn" type="button" data-a="link">Email me a sign-in link instead</button>'}
+      </form>
       <p class="msg" role="alert">${esc(st.msg)}</p></section>`;
   }
   function filters(){
@@ -257,9 +282,10 @@
     else if(a==='band'){st.band=t.dataset.v;saveView();load()}
     else if(a==='reload')load();
     else if(a==='again'){st.view='login';st.msg='';render()}
+    else if(a==='link')sendLink((document.getElementById('email')||{}).value);
     else if(a==='signout'){client().auth.signOut().catch(()=>{}).then(()=>{st.email='';st.data=null;st.view='login';render()})}
   });
-  root.addEventListener('submit',e=>{if(e.target.id==='login'){e.preventDefault();sendLink((document.getElementById('email')||{}).value)}});
+  root.addEventListener('submit',e=>{if(e.target.id==='login'){e.preventDefault();const f=e.target;signInPw(f.email.value,f.password.value)}});
 
   /* ---------- start ---------- */
   (async()=>{

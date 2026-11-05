@@ -47,10 +47,17 @@
       meta:{events:MODE==='empty'?0:9123,test_events:MODE==='empty'?0:2510,first_event:day(44),db_bytes:31*1048576,today,generated_at:new Date().toISOString()}
     };
   }
-  const session=MODE==='login'?null:{user:{id:'0',email:'owner@example.com',is_anonymous:false}};
+  /* fake sign-in: password "correct-horse" works for any email; anything else is rejected like Supabase does */
+  let session=MODE==='login'?null:{user:{id:'0',email:'owner@example.com',is_anonymous:false}},cb=()=>{};
+  const fire=(ev)=>setTimeout(()=>cb(ev,session),0);
+  window.fakeCalls=[];
   const fake={
-    auth:{getSession:async()=>({data:{session}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),
-      signInWithOtp:async()=>({error:null}),signOut:async()=>({error:null})},
+    auth:{getSession:async()=>({data:{session}}),onAuthStateChange:f=>{cb=f;return {data:{subscription:{unsubscribe(){}}}}},
+      signInWithPassword:async({email,password})=>{fakeCalls.push(['password',email]);
+        if(password!=='correct-horse')return {data:{session:null},error:{message:'Invalid login credentials',status:400}};
+        session={user:{id:'1',email,is_anonymous:false}};fire('SIGNED_IN');return {data:{session},error:null}},
+      signInWithOtp:async({email,options})=>{fakeCalls.push(['link',email,options&&options.shouldCreateUser]);return {error:null}},
+      signOut:async()=>{session=null;fire('SIGNED_OUT');return {error:null}}},
     rpc:async()=>MODE==='denied'?{data:null,error:{code:'42501',message:'not allowed'}}:{data:stats(),error:null}
   };
   window.supabase={createClient:()=>fake};

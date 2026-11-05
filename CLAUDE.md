@@ -26,7 +26,7 @@ Free, timed puzzle game for Nigerian players aged 4 to 60+, built to give every 
 - `js/online.js`: `NET`, the global leaderboard (anonymous sign-in, score upload, top 50).
 - `js/track.js`: `TRACK`, the anonymous gameplay stats. Plain `fetch` to `/rest/v1/events`, batched, capped queue `bn-q-v1` (200), round-in-progress marker `bn-live-v1`, retries with backoff.
 - `js/app.js`: screens, state `S`, scoring, unlocks, adaptive difficulty, leaderboard view. Tracking hooks: `startRound` (roundStart), `answer` (progress, timeout count `S.to`), `finish` (roundEnd), `go` (roundQuit when leaving a live round).
-- `admin.html`, `js/admin.js`, `css/admin.css`: admin dashboard (noindex, not linked). Magic-link sign-in, one RPC `admin_stats(p_from, p_to, p_band)`, plain-SVG charts.
+- `admin.html`, `js/admin.js`, `css/admin.css`: admin dashboard (noindex, not linked). Email + password sign-in (`signInWithPassword`) or email link (`signInWithOtp`, `shouldCreateUser:false`), one RPC `admin_stats(p_from, p_to, p_band)`, plain-SVG charts.
 - `supabase/leaderboard.sql`, `supabase/schema.sql` (stats), `supabase/seed_test.sql` (test data, `is_test = true`).
 - `tests/`: browser test pages and `rls-check.ps1`. Excluded from deploys by `.vercelignore`.
 
