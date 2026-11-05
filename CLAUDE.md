@@ -15,7 +15,7 @@ Free, timed puzzle game for Nigerian players aged 4 to 60+, built to give every 
 - Collect no personal data: no emails, real names, locations or IP addresses. Players never sign in (the leaderboard uses anonymous Supabase sign-in; stats use no sign-in at all).
 - Stats identify a browser only by a random UUID (`bn-device-v1`), never linked to the leaderboard's anonymous user id. Events include the nickname (ninja name), as agreed with the owner.
 - Only the Supabase PUBLISHABLE key (`sb_publishable_…`) may appear in the repo (`js/config.js`). Never add a `service_role` or `sb_secret_` key anywhere.
-- `public.events`: anon/authenticated may INSERT (only the gameplay columns, with CHECK constraints). Only admins (`private.admins` email list, non-anonymous session) can SELECT or call `public.admin_stats()`. Nobody can UPDATE/DELETE via the API.
+- `public.events` (event types: session_start, round_complete, round_abandoned, daily_target_hit; points per round 0–400): anon/authenticated may INSERT (only the gameplay columns, with CHECK constraints). Only admins (`private.admins` email list, non-anonymous session) can SELECT or call `public.admin_stats()`. Nobody can UPDATE/DELETE via the API.
 - All database text shown in HTML must go through `esc()`.
 
 ## Files
@@ -27,12 +27,16 @@ Free, timed puzzle game for Nigerian players aged 4 to 60+, built to give every 
 - `js/track.js`: `TRACK`, the anonymous gameplay stats. Plain `fetch` to `/rest/v1/events`, batched, capped queue `bn-q-v1` (200), round-in-progress marker `bn-live-v1`, retries with backoff.
 - `js/app.js`: screens, state `S`, scoring, unlocks, adaptive difficulty, leaderboard view. Tracking hooks: `startRound` (roundStart), `answer` (progress, timeout count `S.to`), `finish` (roundEnd), `go` (roundQuit when leaving a live round).
 - `admin.html`, `js/admin.js`, `css/admin.css`: admin dashboard (noindex, not linked). Email + password sign-in (`signInWithPassword`) or email link (`signInWithOtp`, `shouldCreateUser:false`), one RPC `admin_stats(p_from, p_to, p_band)`, plain-SVG charts.
-- `supabase/leaderboard.sql`, `supabase/schema.sql` (stats), `supabase/seed_test.sql` (test data, `is_test = true`).
-- `tests/`: browser test pages and `rls-check.ps1`. Excluded from deploys by `.vercelignore`.
+- `supabase/leaderboard.sql`, `supabase/schema.sql` (stats; section 2b upgrades an older events table, safe to re-run), `supabase/seed_test.sql` (test data, `is_test = true`), `supabase/season2.sql` (one-off leaderboard reset with backup).
+- `tests/`: browser test pages, `ramp-sim.js` (Node difficulty simulation) and `rls-check.ps1`. Excluded from deploys by `.vercelignore`.
 
 ## Game rules (keep these unless asked to change them)
 - 4 age bands × puzzle types (+ "Mix It Up") × 3 levels × 10 rounds × 10 questions.
-- Points per correct answer: 10 + up to 5 speed bonus, × 1 / 1.5 / 2 by level. Pass a round with 6/10. Stars at 60/80/90%. Pass all 10 rounds to unlock the next level.
+- Points per correct answer (Season 2, Nov 2026): 20 if answered at once, falling evenly to 5 at the buzzer (`SPEED`, `ptsFor()` in content.js), × 1 / 1.5 / 2 by level (`MULT`), rounded per answer. Max per round 200 / 300 / 400. Pass a round with 6/10. Stars at 60/80/90%. Pass all 10 rounds to unlock the next level.
+- Each round starts with a "Get ready" card (`ready` screen; the clock starts on "Start round", `beginRound()`). The timer shows the points still available (`#tpts`).
+- Difficulty ramp within a level (`rampPicker()` in content.js): rounds 1–3 easier half of the level's question types, 4–7 all, 8–10 70% harder half; Hard rounds 8–10 also use `BOOST` (bigger numbers). Difficulty scores are `DIFF`. Check with `node tests/ramp-sim.js`.
+- Daily challenge: points target per age band per Lagos day (`DAILY` in content.js: kids 150, teens/adults 300, elders 200); target of the most recently played band; streak of consecutive days hit, per nickname, in `bn-daily-v1`. Sends `daily_target_hit` once per day.
+- Season 2: on first load the game clears old-scoring round points once (`bn-season` = '2'; keeps stars, unlocks, times) and `bn-sent-v1`. `supabase/season2.sql` backs up and empties the global board.
 - Adaptive difficulty: last 3 rounds per player and puzzle type averaging ≥90% swaps 3 questions for the next level up; ≤50% swaps 3 for the level below.
 - Progress is per nickname on the device (`bn-profiles-v2`). Leaderboard score = total of best points per round.
 
@@ -43,7 +47,7 @@ Free, timed puzzle game for Nigerian players aged 4 to 60+, built to give every 
 Serve locally (`python -m http.server 8000` or `npx serve .`). Open `tests/track-test.html`, `tests/game-smoke.html?mode=ok|down|blocked`, `tests/admin-preview.html`; use `tests/phone.html?src=…` for a true 375 px width. Headless Chrome works too (`--headless=new --virtual-time-budget=120000 --dump-dom`; results are in the page title). Check the console for lines starting with "Brainbox Ninja:". After running `supabase/schema.sql`, run `tests/rls-check.ps1`.
 
 ## Known gaps / next steps
-- Leaderboard audit fixes are pending (nickname-switch total bug, missing `leaderboard_best` view, sign-in on every visit). See the audit notes in the conversation history.
+- Leaderboard audit fixes still pending: missing `leaderboard_best` view (run supabase/leaderboard.sql section 1), sign-in on every visit. The nickname-switch total bug is fixed (the leaderboard total now uses the typed nickname's own profile).
 - Leaderboard and stats are not cheat-proof: values are computed in the browser.
 - Beginner proverb levels still repeat some questions; proverbs and riddles need checking by a Nigerian reader.
 - Nicknames are not filtered; children play, so a moderation step is needed before promoting the leaderboard widely.

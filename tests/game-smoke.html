@@ -62,6 +62,8 @@ window.fetch=(u,o)=>{
     click('[data-a="start"]');
     const inp=$('#nick');inp.value='SmokeTest';inp.dispatchEvent(new Event('input',{bubbles:true}));
     click('[data-a="band"][data-b="adults"]');click('[data-a="cat"][data-c="memory"]');click('[data-a="level"][data-l="0"]');click('[data-a="round"][data-r="0"]');
+    ok('"Get ready" card first',S.screen==='ready'&&/Answer fast for more points/.test($('#app').textContent)&&/25 seconds each|\d+ seconds each/.test($('#app').textContent),$('#app').textContent.slice(0,160));
+    click('[data-a="go"]');
     ok('round started',S.screen==='play'&&S.qs.length===10,S.qs.length);
     for(let i=0;i<10;i++){
       if($('[data-a="memodone"]'))click('[data-a="memodone"]');
@@ -69,7 +71,11 @@ window.fetch=(u,o)=>{
       const q=S.qs[S.i];
       if(i===3)await wait(TL.adults[0]*1000+600);                                   /* let the timer run out */
       else if(i===5||i===8)click(`[data-a="pick"][data-k="${(q.ans+1)%q.opts.length}"]`); /* wrong answer */
-      else click(`[data-a="pick"][data-k="${q.ans}"]`);
+      else{
+        if(i===0)ok('points counter beside the timer',/^\d+ pts$/.test(($('#tpts')||{}).textContent||''),($('#tpts')||{}).textContent);
+        click(`[data-a="pick"][data-k="${q.ans}"]`);
+        if(i===0)ok('"+N pts in Xs" after a right answer',/Correct! \+\d+ pts in \d+\.\ds/.test($('.fb').textContent)&&S.gain>=SPEED.min&&S.gain<=SPEED.max,$('.fb').textContent);
+      }
       if(S.picked===null)throw new Error('question '+(i+1)+' not answered');
       await wait(30);click('[data-a="next"]');
     }
@@ -79,11 +85,13 @@ window.fetch=(u,o)=>{
     ok('timeout counted for stats',S.to===1,S.to);
     const rec0=ALL.SmokeTest&&ALL.SmokeTest.adults_memory_0_0;
     ok('progress saved as before',rec0&&rec0.p===S.res.pts&&rec0.s>=1,JSON.stringify(rec0));
+    ok('round points between 7×5 and 7×20',S.res.pts>=7*SPEED.min&&S.res.pts<=7*SPEED.max,S.res.pts);
+    ok('daily points counted',dailyOf('SmokeTest').pts===S.res.pts&&/points today/.test($('#app').textContent),JSON.stringify(dailyOf('SmokeTest')));
     ok('next round unlocked',roundOpen('adults','memory',0,1));
     if(STOP==='result')return done();
 
     /* second round: quit after two answers */
-    click('[data-a="again"]');
+    click('[data-a="again"]');click('[data-a="go"]');
     for(let i=0;i<2;i++){if($('[data-a="memodone"]'))click('[data-a="memodone"]');click(`[data-a="pick"][data-k="${S.qs[S.i].ans}"]`);await wait(30);if(i<1)click('[data-a="next"]')}
     click('[data-a="rounds"]');
     ok('quit back to rounds',S.screen==='rounds');

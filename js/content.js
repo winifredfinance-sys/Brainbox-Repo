@@ -145,6 +145,14 @@ const BANDS=[
 const LEVELS=['Beginner','Medium','Hard'];
 const TL={kids:[30,30,30],teens:[20,25,30],adults:[25,30,40],elders:[40,45,50]};
 const MULT=[1,1.5,2];
+/* speed scoring: a right answer is worth SPEED.max points straight away, falling evenly to SPEED.min at the buzzer,
+   then times the level multiplier (MULT). Rounded per answer, so the "+N pts" shown always add up to the round total. */
+const SPEED={max:20,min:5};
+const ptsFor=(rem,limit,level)=>Math.round((SPEED.min+(SPEED.max-SPEED.min)*Math.max(0,Math.min(1,rem/limit)))*MULT[level]);
+/* daily challenge: points to score each day (Lagos time) per age range. Tune here. */
+const DAILY={kids:150,teens:300,adults:300,elders:200};
+const lagosDay=(t=Date.now())=>new Date(t+3600e3).toISOString().slice(0,10);  /* Lagos is UTC+1 all year */
+const dayBefore=d=>new Date(Date.parse(d+'T12:00:00Z')-864e5).toISOString().slice(0,10);
 const WORDS_L=[[['scramble',3,6],['missingLetter',3,6]],[['scramble',5,9],['missingLetter',5,9]],[['scramble',7,12],['missingLetter',7,12]]];
 const PROV_L=[[['proverb',1]],[['proverb',2]],[['proverb',3]]];
 const RID_L=[[['riddle',1,1],['logic',1,1]],[['riddle',1,2],['logic',1,2]],[['riddle',3,3],['logic',2,3]]];
@@ -187,20 +195,52 @@ const hq=s=>{let x=5381;for(let i=0;i<s.length;i++)x=((x<<5)+x+s.charCodeAt(i))|
 const SEEN={};
 try{const raw=JSON.parse(ls.get('bn-seen-v1')||'{}')||{};for(const k in raw)if(Array.isArray(raw[k]))SEEN[k]=new Set(raw[k])}catch(e){}
 const saveSeen=()=>{const o={};for(const k in SEEN){const a=[...SEEN[k]];o[k]=a.slice(-500)}ls.set('bn-seen-v1',JSON.stringify(o))};
-function pull(b,c,l,n){
-  const specs=catOf(b,c).L[l],ck=b+'_'+c+'_'+l,qs=[],seen=new Set(),sn=SEEN[ck]||(SEEN[ck]=new Set());let reset=false;
+/* ---------- difficulty ramp within a level ----------
+   Each question type gets a rough difficulty score (higher = harder). Within a level:
+   rounds 1-3 draw from the easier half of the level's types, rounds 4-7 from all of them,
+   rounds 8-10 mostly (70%) from the harder half. On Hard, rounds 8-10 also use slightly bigger numbers.
+   Levels with a single question type only ramp through those bigger numbers. */
+const SKIPD=s=>s===2||s===5||s===10?2:s<=4?3:4;
+const DIFF={
+ nextNum:()=>1,bigger:m=>1+(m>=100?1:0),count:m=>1.5+m/10,addE:m=>2+m/10,add:m=>2.5+m/20,sub:m=>3+m/20,
+ pattern:k=>({AB:1,AAB:2,ABB:2,AABB:3,ABC:3})[k]||2,skip:SKIPD,missing:s=>SKIPD(s)+1,back:s=>SKIPD(s)+1,oddOne:lv=>lv,
+ mult:(lo,hi)=>1+hi/8,bigAdd:(lo,hi)=>1+Math.log10(hi),bigSub:(lo,hi)=>1.5+Math.log10(hi),percent:ps=>ps.some(p=>p%10&&p!==25)?3.5:ps.some(p=>p!==10&&p!==50)?3:2,
+ algebra:()=>4,avg:()=>4,seqA:st=>st.some(x=>x>8)?2.5:2,seqGrow:()=>3,seqGeo:()=>3,seqFib:()=>4,seqSq:()=>4.5,
+ scramble:(lo,hi)=>1.5+hi/4,missingLetter:(lo,hi)=>1+hi/4,change:p=>2+(p>=2000?1:p>=1000?.5:0),discount:ps=>ps&&ps.some(p=>p%5)?3.5:3,
+ profit:()=>4,loss:()=>4,logic:(lo,hi)=>hi+.5,riddle:(lo,hi)=>hi,proverb:lv=>lv,proverbRev:lv=>lv+.5,memory:n=>n/2,
+ order:lv=>lv+1,day:()=>2.5,age:()=>3,share:()=>2.5,ratio:()=>4
+};
+const diffOf=sp=>{const f=DIFF[sp[0]];try{return f?+f(...sp.slice(1))||2:2}catch(e){return 2}};
+/* Hard level, rounds 8-10: slightly bigger numbers for the types that have a size */
+const BOOST={
+ count:m=>[m+5],bigger:m=>[m*2],add:m=>[m+10],sub:m=>[m+10],addE:m=>[m+2],mult:(lo,hi)=>[lo,hi+6],
+ bigAdd:(lo,hi)=>[lo,Math.round(hi*1.5)],bigSub:(lo,hi)=>[lo,Math.round(hi*1.5)],memory:n=>[n+1],
+ scramble:(lo,hi)=>[lo,hi+2],missingLetter:(lo,hi)=>[lo,hi+2],change:p=>[p?p*2:pick([2000,5000])]
+};
+function rampPicker(specs,l,round){
+  const boost=l===2&&round>=7,up=sp=>boost&&BOOST[sp[0]]?[sp[0],...BOOST[sp[0]](...sp.slice(1))]:sp;
+  const n=specs.length;
+  if(n<2||round==null)return ()=>up(pick(specs));
+  const s=specs.slice().sort((a,b)=>diffOf(a)-diffOf(b)),half=Math.ceil(n/2),easy=s.slice(0,half),hard=s.slice(n-half);
+  if(round<=2)return ()=>up(pick(easy));
+  if(round<=6)return ()=>up(pick(specs));
+  return ()=>up(Math.random()<.7?pick(hard):pick(specs));
+}
+function pull(b,c,l,n,round){
+  const specs=catOf(b,c).L[l],next=rampPicker(specs,l,round),ck=b+'_'+c+'_'+l,qs=[],seen=new Set(),sn=SEEN[ck]||(SEEN[ck]=new Set());let reset=false;
   for(let t=0;qs.length<n&&t<800;t++){
     if(t>250&&!reset){sn.clear();reset=true}
-    const [fn,...a]=pick(specs),q=G[fn](...a),k=hq(q.q+'|'+q.show+'|'+(q.memo||''));
-    if(!seen.has(k)&&!sn.has(k)){seen.add(k);qs.push(q)}
+    const sp=next(),[fn,...a]=sp,q=G[fn](...a),k=hq(q.q+'|'+q.show+'|'+(q.memo||''));
+    if(!seen.has(k)&&!sn.has(k)){seen.add(k);q.d=diffOf(sp);qs.push(q)}
   }
   seen.forEach(k=>sn.add(k));
   return qs;
 }
 /* adj = +1 swaps 3 of the 10 questions for ones from the next level up, -1 for the level below (adaptive difficulty) */
-function build(b,c,l,adj=0){
+/* round (0-9) drives the difficulty ramp above; leave it out for the old, flat mix */
+function build(b,c,l,adj=0,round){
   const l2=l+adj,k=(adj&&l2>=0&&l2<=2)?3:0;
-  const qs=pull(b,c,l,10-k).concat(k?pull(b,c,l2,k):[]);
+  const qs=pull(b,c,l,10-k,round).concat(k?pull(b,c,l2,k,round):[]);
   saveSeen();
   return k?shuffle(qs):qs;
 }

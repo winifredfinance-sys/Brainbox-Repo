@@ -210,3 +210,21 @@ html[data-pal="candy"]{
 /* global leaderboard containers (filled in by js/online.js data) */
 #gboard,#minibody{display:flex;flex-direction:column;gap:12px}
 #sync:empty{display:none}
+
+/* daily challenge (home + results) */
+.daily .mh{gap:10px;flex-wrap:wrap}
+.streak{font-weight:800;font-size:.9em;color:var(--fg);background:var(--cbg,var(--good-bg));border-radius:99px;padding:3px 12px;white-space:nowrap}
+.dnum b{font-family:var(--display);font-size:1.25em;font-variant-numeric:tabular-nums}
+.dok{color:var(--good);font-weight:800;white-space:nowrap}
+.dbar{height:12px;border-radius:6px;background:var(--line);overflow:hidden}
+.dbar i{display:block;height:100%;background:var(--gold);border-radius:6px;transition:width .4s}
+.dres{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.dres.hit{border:2px solid var(--gold);background:var(--good-bg);animation:pop .5s}
+/* "Get ready" card and the points counter next to the timer */
+.ready{align-items:flex-start}
+.rfacts{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:1.1em}
+.rfacts b{font-family:var(--display);font-size:1.4em;font-variant-numeric:tabular-nums}
+.fast{background:var(--bg);border:1px dashed var(--gold);border-radius:12px;padding:10px 14px}
+.ready .btn{width:100%}
+.tpts{min-width:4.6em;text-align:right;font-weight:800;color:var(--good);font-variant-numeric:tabular-nums;white-space:nowrap}
+.nw{white-space:nowrap}

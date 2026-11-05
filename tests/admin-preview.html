@@ -44,6 +44,8 @@
       bands_total:{players:quiet?0:612,rounds:quiet?0:3874},
       pass,adaptive:quiet?[]:[{adj:0,started:3610,completed:3260,passed:2280},{adj:1,started:420,completed:390,passed:310},{adj:-1,started:246,completed:224,passed:121}],
       timeouts,types,daily:days,
+      daily_target:quiet?{players:0,hits:0,avg_streak:null,best_streak:null,active:0}:{players:214,hits:1180,avg_streak:3.4,best_streak:19,active:612},
+      daily_hits:quiet?[]:days.map(d=>({day:d.day,players:Math.round(d.players*.35)})),
       meta:{events:MODE==='empty'?0:9123,test_events:MODE==='empty'?0:2510,first_event:day(44),db_bytes:31*1048576,today,generated_at:new Date().toISOString()}
     };
   }

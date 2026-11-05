@@ -70,10 +70,13 @@ create table if not exists public.events (
   passed          boolean,                              -- null for abandoned rounds
   adaptive_adj    smallint,                             -- -1 warm-up mix, 0 normal, 1 challenge boost
   timeouts        smallint,
+  day_points      integer,                              -- daily_target_hit: points scored that Lagos day
+  day_target      smallint,                             -- daily_target_hit: the target for the player's age band
+  streak          smallint,                             -- daily_target_hit: consecutive days the target was hit
   app_version     text,
   is_test         boolean not null default false,       -- seed data only; the game cannot set it
 
-  constraint events_type check (event_type in ('session_start', 'round_complete', 'round_abandoned')),
+  constraint events_type check (event_type in ('session_start', 'round_complete', 'round_abandoned', 'daily_target_hit')),
   constraint events_time check (occurred_at > created_at - interval '30 days'
                             and occurred_at < created_at + interval '10 minutes'),
   constraint events_nickname check (nickname is null or (
@@ -92,25 +95,84 @@ create table if not exists public.events (
     and (answered is null or answered between 0 and total_questions)
     and (score is null or score between 0 and answered)
     and (timeouts is null or timeouts between 0 and answered)
-    and (points is null or points between 0 and 300)
+    and (points is null or points between 0 and 400)
     and (round_ms is null or round_ms between 0 and 3600000)
-    and (adaptive_adj is null or adaptive_adj in (-1, 0, 1))),
+    and (adaptive_adj is null or adaptive_adj in (-1, 0, 1))
+    and (day_points is null or day_points between 0 and 100000)
+    and (day_target is null or day_target between 1 and 10000)
+    and (streak is null or streak between 1 and 3650)),
   constraint events_shape check (
     (event_type = 'session_start'
       and round_id is null and age_band is null and puzzle_type is null and level is null
       and round_no is null and score is null and total_questions is null and answered is null
       and points is null and round_ms is null and passed is null and adaptive_adj is null
-      and timeouts is null)
+      and timeouts is null and day_points is null and day_target is null and streak is null)
     or
     (event_type in ('round_complete', 'round_abandoned')
       and round_id is not null and age_band is not null and puzzle_type is not null
       and level is not null and round_no is not null and score is not null
       and total_questions is not null and answered is not null and points is not null
       and round_ms is not null and adaptive_adj is not null and timeouts is not null
+      and day_points is null and day_target is null and streak is null
       and ((event_type = 'round_complete' and passed is not null and answered = total_questions)
         or (event_type = 'round_abandoned' and passed is null)))
+    or
+    (event_type = 'daily_target_hit'
+      and age_band is not null and day_points is not null and day_target is not null and streak is not null
+      and day_points >= day_target
+      and round_id is null and puzzle_type is null and level is null and round_no is null and score is null
+      and total_questions is null and answered is null and points is null and round_ms is null
+      and passed is null and adaptive_adj is null and timeouts is null)
   )
 );
+
+-------------------------------------------------------------------------------
+-- 2b. Upgrade a table created by an earlier version of this file (Nov 2026: daily challenge,
+--     new speed scoring with up to 400 points per Hard round). Safe to run again.
+-------------------------------------------------------------------------------
+alter table public.events add column if not exists day_points integer;
+alter table public.events add column if not exists day_target smallint;
+alter table public.events add column if not exists streak     smallint;
+alter table public.events drop constraint if exists events_type;
+alter table public.events drop constraint if exists events_ranges;
+alter table public.events drop constraint if exists events_shape;
+alter table public.events add constraint events_type check (event_type in ('session_start', 'round_complete', 'round_abandoned', 'daily_target_hit'));
+alter table public.events add constraint events_ranges check (
+        (level is null or level between 0 and 2)
+    and (round_no is null or round_no between 0 and 9)
+    and (total_questions is null or total_questions between 1 and 10)
+    and (answered is null or answered between 0 and total_questions)
+    and (score is null or score between 0 and answered)
+    and (timeouts is null or timeouts between 0 and answered)
+    and (points is null or points between 0 and 400)
+    and (round_ms is null or round_ms between 0 and 3600000)
+    and (adaptive_adj is null or adaptive_adj in (-1, 0, 1))
+    and (day_points is null or day_points between 0 and 100000)
+    and (day_target is null or day_target between 1 and 10000)
+    and (streak is null or streak between 1 and 3650));
+alter table public.events add constraint events_shape check (
+    (event_type = 'session_start'
+      and round_id is null and age_band is null and puzzle_type is null and level is null
+      and round_no is null and score is null and total_questions is null and answered is null
+      and points is null and round_ms is null and passed is null and adaptive_adj is null
+      and timeouts is null and day_points is null and day_target is null and streak is null)
+    or
+    (event_type in ('round_complete', 'round_abandoned')
+      and round_id is not null and age_band is not null and puzzle_type is not null
+      and level is not null and round_no is not null and score is not null
+      and total_questions is not null and answered is not null and points is not null
+      and round_ms is not null and adaptive_adj is not null and timeouts is not null
+      and day_points is null and day_target is null and streak is null
+      and ((event_type = 'round_complete' and passed is not null and answered = total_questions)
+        or (event_type = 'round_abandoned' and passed is null)))
+    or
+    (event_type = 'daily_target_hit'
+      and age_band is not null and day_points is not null and day_target is not null and streak is not null
+      and day_points >= day_target
+      and round_id is null and puzzle_type is null and level is null and round_no is null and score is null
+      and total_questions is null and answered is null and points is null and round_ms is null
+      and passed is null and adaptive_adj is null and timeouts is null)
+  );
 
 create index if not exists events_occurred_idx on public.events (occurred_at);
 create index if not exists events_type_occurred_idx on public.events (event_type, occurred_at);
@@ -125,7 +187,7 @@ alter table public.events enable row level security;
 revoke all on public.events from public, anon, authenticated;
 grant insert (occurred_at, event_id, device_id, session_id, event_type, nickname, round_id,
               age_band, puzzle_type, level, round_no, score, total_questions, answered, points,
-              round_ms, passed, adaptive_adj, timeouts, app_version)
+              round_ms, passed, adaptive_adj, timeouts, day_points, day_target, streak, app_version)
   on public.events to anon, authenticated;
 grant select on public.events to authenticated;          -- the policy below limits it to admins
 grant usage on sequence public.events_id_seq to anon, authenticated;
@@ -175,7 +237,7 @@ begin
   ),
   rnd_all as (     -- one row per round: a finished round wins over an "abandoned" report of the same round
     select distinct on (round_id) *
-    from ev where event_type <> 'session_start'
+    from ev where event_type in ('round_complete', 'round_abandoned')
     order by round_id, (event_type = 'round_complete') desc, occurred_at desc
   ),
   rnd as (         -- rounds in the chosen range and age band
@@ -184,6 +246,14 @@ begin
       and (p_band is null or age_band = p_band)
   ),
   done as (select * from rnd where event_type = 'round_complete'),
+  dt as (          -- daily target hits in the chosen range and age band, one per device and Lagos day
+    select distinct on (device_id, day) device_id, day, streak, day_points, day_target
+    from ev
+    where event_type = 'daily_target_hit'
+      and occurred_at >= v_from and occurred_at < v_to
+      and (p_band is null or age_band = p_band)
+    order by device_id, day, streak desc
+  ),
   band_devs as (   -- players (devices with at least one round) in the chosen age band
     select distinct device_id from rnd_all where p_band is null or age_band = p_band
   ),
@@ -286,6 +356,17 @@ begin
       left join (select day, count(distinct device_id) as p,
                         count(*) filter (where event_type = 'round_complete') as n
                  from rnd group by day) a on a.day = g.d),
+    'daily_target', (   -- players = devices that hit the target at least once; avg_streak = average of each player's best streak
+      select jsonb_build_object(
+        'players',     count(*),
+        'hits',        coalesce(sum(n), 0),
+        'avg_streak',  round(avg(best), 1),
+        'best_streak', max(best),
+        'active',      (select count(distinct device_id) from done))
+      from (select device_id, count(*) as n, max(streak) as best from dt group by device_id) x),
+    'daily_hits', (
+      select coalesce(jsonb_agg(jsonb_build_object('day', day, 'players', p) order by day), '[]'::jsonb)
+      from (select day, count(*) as p from dt group by day) x),
     'meta', jsonb_build_object(
       'events',       (select count(*) from public.events),
       'test_events',  (select count(*) from public.events where is_test),

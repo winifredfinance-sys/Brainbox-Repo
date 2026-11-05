@@ -97,4 +97,30 @@ begin
 end
 $$;
 
+-- Daily challenge: a daily_target_hit event on days where a test player's finished rounds reached the target
+-- (kids 150, teens/adults 300, 60+ 200), with a streak counted over consecutive days. Needs schema.sql section 2b.
+do $$
+declare r record; prev_dev uuid; prev_day date; st int; t timestamptz;
+begin
+  for r in
+    select device_id, day, band, nick, pts, target
+    from (select device_id, (occurred_at at time zone 'Africa/Lagos')::date as day, min(age_band) as band, min(nickname) as nick,
+                 sum(points)::int as pts,
+                 (case min(age_band) when 'kids' then 150 when 'elders' then 200 else 300 end) as target
+          from public.events where is_test and event_type = 'round_complete'
+          group by 1, 2) x
+    where pts >= target
+    order by device_id, day
+  loop
+    st := case when r.device_id = prev_dev and r.day = prev_day + 1 then st + 1 else 1 end;
+    prev_dev := r.device_id; prev_day := r.day;
+    t := least(now(), (r.day::timestamp + interval '20 hours') at time zone 'Africa/Lagos');
+    insert into public.events (created_at, occurred_at, event_id, device_id, session_id, event_type, nickname,
+      age_band, day_points, day_target, streak, app_version, is_test)
+    values (t, t, gen_random_uuid(), r.device_id, gen_random_uuid(),
+      'daily_target_hit', r.nick, r.band, r.pts, r.target, st, 'seed', true);
+  end loop;
+end
+$$;
+
 select count(*) as test_events_added from public.events where is_test;

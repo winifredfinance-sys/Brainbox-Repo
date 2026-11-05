@@ -1,5 +1,6 @@
 /* Brainbox Ninja: anonymous gameplay stats for the admin dashboard (admin.html).
-   - Sends three kinds of event to Supabase (public.events): session_start, round_complete, round_abandoned.
+   - Sends four kinds of event to Supabase (public.events): session_start, round_complete, round_abandoned,
+     and daily_target_hit (once a day per nickname, with the day's points, the target and the streak).
    - Identifies a browser only by a random device ID (bn-device-v1). No emails, real names, location or IP.
      The ninja name (nickname) is included so stats can later be matched to the leaderboard.
    - Never blocks or breaks the game: every call is wrapped, sending is in the background, and if
@@ -9,8 +10,12 @@
      public.events allows inserts only; nobody can read the events with this key.
    Needs js/content.js (ls helper) and js/config.js. Loaded before js/app.js. */
 const TRACK=(()=>{
-  const VERSION='2026.11.1',QK='bn-q-v1',DK='bn-device-v1',LK='bn-live-v1',MAX=200,BATCH=50,SESSION_GAP=30*60*1000,TIMEOUT=8000;
+  const VERSION='2026.11.2',QK='bn-q-v1',DK='bn-device-v1',LK='bn-live-v1',MAX=200,BATCH=50,SESSION_GAP=30*60*1000,TIMEOUT=8000;
   const COLS='occurred_at,event_id,device_id,session_id,event_type,nickname,round_id,age_band,puzzle_type,level,round_no,score,total_questions,answered,points,round_ms,passed,adaptive_adj,timeouts,app_version';
+  /* daily_target_hit events also carry these columns. They are sent in their own batches, so the other
+     events keep working on a database that has not been upgraded yet (supabase/schema.sql section 2b). */
+  const COLS_DAY=COLS+',day_points,day_target,streak';
+  const isDay=e=>e&&e.event_type==='daily_target_hit';
   const CFG=window.BN_SUPABASE||{};
   const url=String(CFG.url||'').trim().replace(/\/(rest|auth)\/v1(\/.*)?$/,'').replace(/\/+$/,''),key=String(CFG.key||'').trim();
   /* only a publishable key (or a legacy anon JWT) is ever used; a secret key switches tracking off */
@@ -57,7 +62,7 @@ const TRACK=(()=>{
     if(!on)return;
     const ev={occurred_at:new Date().toISOString(),event_id:uuid(),device_id:device,session_id:session,event_type:fields.event_type,nickname:nick(),
       round_id:null,age_band:null,puzzle_type:null,level:null,round_no:null,score:null,total_questions:null,answered:null,points:null,
-      round_ms:null,passed:null,adaptive_adj:null,timeouts:null,app_version:VERSION};
+      round_ms:null,passed:null,adaptive_adj:null,timeouts:null,day_points:null,day_target:null,streak:null,app_version:VERSION};
     Object.assign(ev,fields);
     load();Q.push(ev);save();schedule(2000);
   }
@@ -70,13 +75,15 @@ const TRACK=(()=>{
     load();if(!Q.length)return;
     if(navigator.onLine===false){schedule(30000);return}
     busy=true;
-    const batch=Q.slice(0,size);let ok=false,drop=false,split=false;
+    /* one kind per batch: daily events need the extra columns */
+    const kind=isDay(Q[0]);let end=0;while(end<Q.length&&end<size&&isDay(Q[end])===kind)end++;
+    const batch=Q.slice(0,end);let ok=false,drop=false,split=false;
     try{
       const ctl=typeof AbortController==='function'?new AbortController():null;
       const stop=setTimeout(()=>{try{ctl&&ctl.abort()}catch(e){}},TIMEOUT);
       const headers={'apikey':key,'Content-Type':'application/json','Prefer':'return=minimal'};
       if(jwt)headers.Authorization='Bearer '+key;
-      const r=await fetch(url+'/rest/v1/events?columns='+COLS,{method:'POST',headers,body:JSON.stringify(batch),keepalive:!!keep,signal:ctl?ctl.signal:undefined,credentials:'omit'});
+      const r=await fetch(url+'/rest/v1/events?columns='+(kind?COLS_DAY:COLS),{method:'POST',headers,body:JSON.stringify(batch),keepalive:!!keep,signal:ctl?ctl.signal:undefined,credentials:'omit'});
       clearTimeout(stop);
       if(r.ok)ok=true;
       else if(r.status===400||r.status===409||r.status===413||r.status===422){
@@ -117,15 +124,22 @@ const TRACK=(()=>{
   function progress(p){
     if(!on||!live)return;
     const answered=int(p.answered,0,live.total_questions);
-    Object.assign(live,{answered,score:int(p.score,0,answered),points:int(p.points,0,300),round_ms:int(p.ms,0,3600000),timeouts:int(p.timeouts,0,answered)});
+    Object.assign(live,{answered,score:int(p.score,0,answered),points:int(p.points,0,400),round_ms:int(p.ms,0,3600000),timeouts:int(p.timeouts,0,answered)});
     saveLive();
   }
   function roundEnd(r){
     if(!on||!live)return;
     const total=live.total_questions;
-    queue(roundFields(live,{event_type:'round_complete',answered:total,score:int(r.score,0,total),points:int(r.points,0,300),
+    queue(roundFields(live,{event_type:'round_complete',answered:total,score:int(r.score,0,total),points:int(r.points,0,400),
       round_ms:int(r.ms,0,3600000),passed:!!r.passed,timeouts:int(r.timeouts,0,total)}));
     live=null;saveLive();
+  }
+  /* today's points target reached (sent once per nickname per Lagos day; app.js decides when) */
+  function dailyHit(d){
+    if(!on)return;
+    const band=BANDS_OK.includes(d.band)?d.band:null;if(!band)return;
+    ensureSession();
+    queue({event_type:'daily_target_hit',age_band:band,day_points:int(d.points,0,100000),day_target:int(d.target,1,10000),streak:int(d.streak,1,3650)});
   }
   function roundQuit(){
     if(!on||!live)return;
@@ -154,6 +168,6 @@ const TRACK=(()=>{
   }
 
   const safe=f=>function(){try{return f.apply(null,arguments)}catch(e){}};
-  return {on,init:safe(init),roundStart:safe(roundStart),progress:safe(progress),roundEnd:safe(roundEnd),roundQuit:safe(roundQuit),
+  return {on,init:safe(init),roundStart:safe(roundStart),progress:safe(progress),roundEnd:safe(roundEnd),roundQuit:safe(roundQuit),dailyHit:safe(dailyHit),
     flush:safe(()=>flush(false)),pending:safe(()=>load().length)};
 })();
