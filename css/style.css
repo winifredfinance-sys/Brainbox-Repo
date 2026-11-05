@@ -1,14 +1,15 @@
 *,*::before,*::after{box-sizing:border-box}
 /* Layout: one narrow column, one screen at a time: name + age range → puzzle type → level → timed round → score → leaderboard.
-   Look: warm beige paper, ink-black ninja, vermilion headband accent. Light only, system fonts (no downloads). */
+   Look: Naija Green (cream paper, flag green, gold) with Candy Brain (purple, pink) for ages 4-10. Light only, system fonts (no downloads). */
 :root{
-  --bg:#F3EBDD; --ghost:#E6D9C2; --surface:#FFFBF4; --fg:#2A2017; --muted:#66584A; --line:#E0D2BB;
-  --ink:#2A2017; --ink-text:#FBF3E6; --red:#D63F2A; --gold:#C98F00;
-  --good:#0F7B4B; --good-bg:#DDF1E4; --bad:#B3261E; --bad-bg:#FBE3DE;
-  --kids:#8A5A00; --kids-bg:#FBE9B8;
-  --teens:#3451C6; --teens-bg:#DFE5FA;
-  --adults:#0B6B3A; --adults-bg:#D9EFE1;
-  --elders:#B4410E; --elders-bg:#F8DECB;
+  /* Palette A: Naija Green (teens, adults, 60+). Palette B below: Candy Brain (kids). */
+  --bg:#F7F2E3; --ghost:#EBE4CC; --surface:#FFFFFF; --fg:#14261C; --muted:#4D5A50; --line:#D8D2B8;
+  --ink:#14261C; --ink-text:#FFFFFF; --red:#0A5C36; --gold:#E39B00; --me-bg:#E6F2E9;
+  --good:#0A5C36; --good-bg:#DCEFE2; --bad:#B4440A; --bad-bg:#FBE6D8;
+  --kids:#5B3FD6; --kids-bg:#ECE6FF;
+  --teens:#0A5C36; --teens-bg:#DCEFE2;
+  --adults:#0A5C36; --adults-bg:#DCEFE2;
+  --elders:#0A5C36; --elders-bg:#DCEFE2;
   --shadow:0 1px 0 rgba(42,32,23,.04),0 10px 24px -16px rgba(42,32,23,.4);
   --display:"Trebuchet MS","Segoe UI",system-ui,sans-serif;
   --body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -186,7 +187,7 @@ h2.sub{font-family:var(--display);font-size:.95em;font-weight:700;color:var(--mu
 .tab[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ink-text)}
 .rows{list-style:none;padding:0;display:flex;flex-direction:column;gap:6px}
 .rows li{display:grid;grid-template-columns:2.4em 1fr auto;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
-.rows li.me{border:2px solid var(--red);background:#FFF1EA}
+.rows li.me{border:2px solid var(--red);background:var(--me-bg)}
 .rk{display:grid;place-items:center;width:2em;height:2em;border-radius:50%;background:var(--line);font-weight:800;font-variant-numeric:tabular-nums}
 .rk.r1{background:#F2C94C}.rk.r2{background:#D5D9DE}.rk.r3{background:#E3A66E}
 .pn{font-weight:700;overflow-wrap:anywhere;min-width:0}
@@ -198,3 +199,14 @@ h2.sub{font-family:var(--display);font-size:.95em;font-weight:700;color:var(--mu
 @media (max-width:380px){.grid{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:no-preference){.card,.opt,.lvl,.btn{transition:border-color .15s,transform .15s}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.cf{display:none}.rfill{stroke-dashoffset:var(--off)}}
+
+/* Candy Brain palette: applied to the Little Minds (4-10) screens */
+html[data-pal="candy"]{
+  --bg:#FFF1F9; --ghost:#F8D9EC; --surface:#FFFFFF; --fg:#2B2350; --muted:#5B5280; --line:#EBCFE3;
+  --ink:#5B3FD6; --ink-text:#FFFFFF; --red:#D6236B; --gold:#FFB400; --me-bg:#F2ECFF;
+  --good:#0F8A5F; --good-bg:#DDF5EA; --bad:#C21F3A; --bad-bg:#FDE3EA;
+}
+
+/* global leaderboard containers (filled in by js/online.js data) */
+#gboard,#minibody{display:flex;flex-direction:column;gap:12px}
+#sync:empty{display:none}
