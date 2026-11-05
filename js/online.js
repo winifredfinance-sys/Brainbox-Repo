@@ -7,7 +7,8 @@
    Needs js/config.js. The official client (js/vendor/supabase-2.118.0.js) is loaded on demand. */
 const NET=(()=>{
   const CFG=window.BN_SUPABASE||{},LIB='js/vendor/supabase-2.118.0.js',TOP=50,TABLE='leaderboard',VIEW='leaderboard_best',SENT='bn-sent-v1';
-  const url=String(CFG.url||'').trim(),key=String(CFG.key||'').trim();
+  /* accept the URL with or without a trailing /rest/v1/ (the client adds those paths itself) */
+  const url=String(CFG.url||'').trim().replace(/\/(rest|auth)\/v1(\/.*)?$/,'').replace(/\/+$/,''),key=String(CFG.key||'').trim();
 
   /* refuse secret keys outright: they bypass Row Level Security and must never reach a browser */
   let secret=/^sb_secret_/.test(key);
@@ -20,6 +21,16 @@ const NET=(()=>{
   const subs=[];
   function on(f){subs.push(f)}
   const emit=()=>subs.forEach(f=>{try{f()}catch(e){console.error(e)}});
+  /* plain-English hints in the browser console for the usual set-up mistakes (players only see friendly messages) */
+  function explain(what,e){
+    const c=String(e&&e.code||''),m=String(e&&e.message||e||''),s=e&&e.status;let h='';
+    if(/anonymous/i.test(c+' '+m))h='Anonymous sign-ins look switched off: Supabase dashboard → Authentication → Sign In / Providers → allow anonymous sign-ins.';
+    else if(c==='42501'||/row-level security|permission denied/i.test(m))h='Supabase refused this (Row Level Security or table grants). Check the SELECT/INSERT policies and grants on public.leaderboard.';
+    else if(s===401||/invalid api key|no api key|jwt/i.test(m))h='The key in js/config.js was not accepted. Use the Publishable key from Project Settings → API Keys.';
+    else if(c==='42P01'||c==='PGRST205')h='The leaderboard table was not found. It must be public.leaderboard.';
+    else if(/rate limit|429/i.test(m+' '+s))h='Supabase rate limit reached (often anonymous sign-ins per IP). Raise it under Authentication → Rate Limits.';
+    console.warn('Brainbox Ninja: '+what,m,h?'| Fix: '+h:'');
+  }
 
   /* ---------- connection ---------- */
   let sb=null,libP=null,authP=null;
@@ -72,7 +83,7 @@ const NET=(()=>{
       api.syncState='saved';
       busy=false;refresh(nick,true);
     }catch(e){
-      console.warn('Brainbox Ninja: score not sent yet.',e&&e.message||e);
+      explain('score not sent yet.',e);
       api.syncState=navigator.onLine?'failed':'offline';
     }finally{busy=false;emit()}
     if(again){again=false;sync()}
@@ -129,7 +140,7 @@ const NET=(()=>{
         }
         Object.assign(board,{status:'ok',rows,me,at:Date.now()});
       }catch(e){
-        console.warn('Brainbox Ninja: leaderboard not loaded.',e&&e.message||e);
+        explain('leaderboard not loaded.',e);
         board.status=navigator.onLine?'error':'offline';
       }finally{loading=null;emit();if(reload){reload=false;refresh(undefined,true)}}
     })();
@@ -139,7 +150,7 @@ const NET=(()=>{
   function init(getPending){
     pending=getPending||pending;
     if(!configured)return;
-    signIn().then(()=>sync()).catch(e=>console.warn('Brainbox Ninja: anonymous sign-in failed.',e&&e.message||e));
+    signIn().then(()=>sync()).catch(e=>explain('anonymous sign-in failed.',e));
     window.addEventListener('online',()=>{sync();if(board.status!=='ok')refresh(undefined,true)});
     window.addEventListener('offline',()=>{if(board.status!=='ok')board.status='offline';emit()});
   }
