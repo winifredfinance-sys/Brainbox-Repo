@@ -182,16 +182,25 @@ const CATS={
 };
 const catsFor=b=>CATS[b].concat([{id:'mix',name:'Mix It Up',glyph:'★',blurb:'A bit of everything from this age range.',L:[0,1,2].map(l=>CATS[b].flatMap(c=>c.L[l]))}]);
 const catOf=(b,c)=>catsFor(b).find(x=>x.id===c);
+/* questions already shown on this device are remembered so rounds do not repeat (stored as short hashes) */
+const hq=s=>{let x=5381;for(let i=0;i<s.length;i++)x=((x<<5)+x+s.charCodeAt(i))|0;return (x>>>0).toString(36)};
 const SEEN={};
-function build(b,c,l){
+try{const raw=JSON.parse(ls.get('bn-seen-v1')||'{}')||{};for(const k in raw)if(Array.isArray(raw[k]))SEEN[k]=new Set(raw[k])}catch(e){}
+const saveSeen=()=>{const o={};for(const k in SEEN){const a=[...SEEN[k]];o[k]=a.slice(-500)}ls.set('bn-seen-v1',JSON.stringify(o))};
+function pull(b,c,l,n){
   const specs=catOf(b,c).L[l],ck=b+'_'+c+'_'+l,qs=[],seen=new Set(),sn=SEEN[ck]||(SEEN[ck]=new Set());let reset=false;
-  for(let t=0;qs.length<10&&t<800;t++){
+  for(let t=0;qs.length<n&&t<800;t++){
     if(t>250&&!reset){sn.clear();reset=true}
-    const [fn,...a]=pick(specs),q=G[fn](...a),k=q.q+'|'+q.show+'|'+(q.memo||'');
+    const [fn,...a]=pick(specs),q=G[fn](...a),k=hq(q.q+'|'+q.show+'|'+(q.memo||''));
     if(!seen.has(k)&&!sn.has(k)){seen.add(k);qs.push(q)}
   }
-  qs.forEach(q=>sn.add(q.q+'|'+q.show+'|'+(q.memo||'')));
+  seen.forEach(k=>sn.add(k));
   return qs;
 }
-
-
+/* adj = +1 swaps 3 of the 10 questions for ones from the next level up, -1 for the level below (adaptive difficulty) */
+function build(b,c,l,adj=0){
+  const l2=l+adj,k=(adj&&l2>=0&&l2<=2)?3:0;
+  const qs=pull(b,c,l,10-k).concat(k?pull(b,c,l2,k):[]);
+  saveSeen();
+  return k?shuffle(qs):qs;
+}
