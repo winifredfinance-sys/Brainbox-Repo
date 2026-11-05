@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>track.js scenario</title></head><body>
+<!-- One test scenario for js/track.js, run inside tests/track-test.html. Never talks to the real Supabase: fetch is replaced below. -->
+<script>
+const SC=new URLSearchParams(location.search).get('s')||'ok';
+const calls=[];let mode=SC==='down'||SC==='cap'?'down':SC==='hang'?'hang':SC==='bad'?'bad':'ok';
+try{['bn-q-v1','bn-device-v1','bn-live-v1'].forEach(k=>localStorage.removeItem(k))}catch(e){}
+if(SC==='reopen')localStorage.setItem('bn-live-v1',JSON.stringify({round_id:'11111111-2222-4333-8444-555555555555',session_id:'11111111-2222-4333-8444-666666666666',age_band:'teens',puzzle_type:'maths',level:1,round_no:4,adaptive_adj:0,total_questions:10,score:2,answered:3,points:40,round_ms:30000,timeouts:1,sent:false}));
+if(SC==='blocked')Object.defineProperty(window,'localStorage',{configurable:true,get(){throw new DOMException('The operation is insecure.','SecurityError')}});
+window.BN_SUPABASE=SC==='unconfigured'?{url:'https://YOUR-PROJECT.supabase.co',key:'sb_publishable_YOUR-KEY'}
+  :SC==='secret'?{url:'https://test.supabase.co',key:'sb_secret_DO_NOT_USE'}
+  :{url:'https://test.supabase.co/rest/v1/',key:'sb_publishable_test'};
+const errors=[];window.addEventListener('error',e=>errors.push(e.message));window.addEventListener('unhandledrejection',e=>errors.push('unhandled: '+e.reason));
+window.fetch=(u,o)=>{
+  let body=null;try{body=JSON.parse(o.body)}catch(e){}
+  calls.push({u,o,body});
+  if(mode==='down')return Promise.reject(new TypeError('Failed to fetch'));
+  if(mode==='hang')return new Promise((ok,no)=>{o.signal&&o.signal.addEventListener('abort',()=>no(new DOMException('aborted','AbortError')))});
+  if(mode==='bad')return Promise.resolve(new Response('{"code":"23514"}',{status:body&&body.some(e=>e.nickname==='BAD')?400:201}));
+  return Promise.resolve(new Response(null,{status:201}));
+};
+</script>
+<script src="../js/content.js"></script>
+<script src="../js/track.js"></script>
+<script>
+(async()=>{
+  const R=[],ok=(name,cond,detail)=>R.push([SC+': '+name,!!cond,detail==null?'':String(detail)]);
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const sent=()=>calls.filter(c=>c.body).flatMap(c=>c.body);
+  const isU=s=>/^[0-9a-f-]{36}$/.test(s||'');
+  const round=(o)=>{TRACK.roundStart(Object.assign({band:'kids',cat:'count',level:0,round:0,adj:0,total:10},o));TRACK.progress({answered:3,score:2,points:25,ms:9000,timeouts:1});};
+  let nk='Ada';
+  try{
+    if(SC==='unconfigured'||SC==='secret'){
+      TRACK.init(()=>nk);round();TRACK.roundEnd({score:7,points:90,ms:40000,passed:true,timeouts:1});await wait(4000);
+      ok('switched off',TRACK.on===false);ok('nothing sent',calls.length===0,calls.length);
+      ok('nothing stored',localStorage.getItem('bn-q-v1')==null&&localStorage.getItem('bn-device-v1')==null);
+    }
+    else if(SC==='ok'){
+      TRACK.init(()=>nk);round({adj:1});TRACK.roundEnd({score:7,points:95,ms:40000,passed:true,timeouts:1});await wait(4000);
+      const ev=sent(),c=calls[0]||{o:{headers:{}}};
+      ok('one request',calls.length===1,calls.length);
+      ok('url and columns',/^https:\/\/test\.supabase\.co\/rest\/v1\/events\?columns=occurred_at,/.test(c.u),c.u);
+      ok('publishable key header only',c.o.headers.apikey==='sb_publishable_test'&&!c.o.headers.Authorization);
+      ok('events sent',ev.map(e=>e.event_type).join()==='session_start,round_complete',ev.map(e=>e.event_type));
+      const rc=ev[1]||{};
+      ok('round fields',rc.age_band==='kids'&&rc.puzzle_type==='count'&&rc.score===7&&rc.answered===10&&rc.points===95&&rc.passed===true&&rc.timeouts===1&&rc.adaptive_adj===1&&rc.total_questions===10,JSON.stringify(rc));
+      ok('nickname included',ev.every(e=>e.nickname==='Ada'));
+      ok('ids are UUIDs and shared',isU(rc.device_id)&&isU(rc.session_id)&&isU(rc.round_id)&&rc.device_id===ev[0].device_id&&rc.session_id===ev[0].session_id);
+      ok('device id saved',localStorage.getItem('bn-device-v1')===rc.device_id);
+      ok('no personal fields',ev.every(e=>!('email' in e)&&!('ip' in e)&&!('location' in e)));
+      ok('queue empty',TRACK.pending()===0,TRACK.pending());
+    }
+    else if(SC==='down'){
+      TRACK.init(()=>nk);round();TRACK.roundEnd({score:5,points:60,ms:50000,passed:false,timeouts:0});await wait(4000);
+      ok('tried to send',calls.length>=1,calls.length);
+      ok('kept in queue',TRACK.pending()===2,TRACK.pending());
+      ok('queue saved in localStorage',JSON.parse(localStorage.getItem('bn-q-v1')||'[]').length===2);
+      mode='ok';const before=calls.length;window.dispatchEvent(new Event('online'));await wait(3000);
+      ok('flushed when back online',TRACK.pending()===0&&calls.length>before,TRACK.pending());
+      ok('both events delivered',calls[calls.length-1].body.length===2);
+    }
+    else if(SC==='cap'){
+      TRACK.init(()=>nk);for(let i=0;i<260;i++){round({round:i%10});TRACK.roundEnd({score:6,points:70,ms:30000,passed:true,timeouts:0})}
+      await wait(2000);ok('queue capped at 200',TRACK.pending()===200,TRACK.pending());
+      const q=JSON.parse(localStorage.getItem('bn-q-v1')||'[]');ok('oldest dropped first',q.length===200&&q[0].event_type==='round_complete');
+    }
+    else if(SC==='bad'){
+      TRACK.init(()=>nk);round();TRACK.roundEnd({score:6,points:70,ms:30000,passed:true,timeouts:0});
+      nk='BAD';round();TRACK.roundEnd({score:6,points:70,ms:30000,passed:true,timeouts:0});
+      nk='Ada';round();TRACK.roundEnd({score:6,points:70,ms:30000,passed:true,timeouts:0});
+      await wait(15000);
+      const good=calls.filter(c=>c.body&&!c.body.some(e=>e.nickname==='BAD')).flatMap(c=>c.body);
+      ok('rejected event dropped',TRACK.pending()===0,TRACK.pending());
+      ok('good events still delivered (session start + 2 rounds)',good.length===3,good.length);
+    }
+    else if(SC==='hang'){
+      TRACK.init(()=>nk);round();TRACK.roundEnd({score:6,points:70,ms:30000,passed:true,timeouts:0});
+      const t0=performance.now();TRACK.roundStart({band:'teens',cat:'maths',level:1,round:2,adj:0,total:10});
+      ok('calls return at once',performance.now()-t0<50);
+      await wait(12000);ok('slow request abandoned, events kept',TRACK.pending()>=2,TRACK.pending());
+      ok('timeout signal used',calls[0]&&calls[0].o.signal&&calls[0].o.signal.aborted);
+      mode='ok';TRACK.flush();await wait(2000);ok('sent later',calls[calls.length-1].body&&TRACK.pending()===0,TRACK.pending());
+    }
+    else if(SC==='blocked'){
+      let threw=false;try{localStorage.getItem('x')}catch(e){threw=true}
+      ok('localStorage really blocked',threw);
+      TRACK.init(()=>nk);round();TRACK.roundEnd({score:8,points:110,ms:35000,passed:true,timeouts:0});await wait(4000);
+      const ev=sent();ok('still sends from memory',ev.length===2&&TRACK.pending()===0,ev.length);
+      ok('device id made in memory',isU(ev[0]&&ev[0].device_id));
+    }
+    else if(SC==='abandon'){
+      TRACK.init(()=>nk);round({band:'elders',cat:'memory',level:2});TRACK.roundQuit();await wait(4000);
+      const a=sent().find(e=>e.event_type==='round_abandoned')||{};
+      ok('abandoned event',a.answered===3&&a.score===2&&a.timeouts===1&&a.passed===null&&a.level===2,JSON.stringify(a));
+      ok('marker cleared',(localStorage.getItem('bn-live-v1')||'')==='');
+    }
+    else if(SC==='reopen'){
+      TRACK.init(()=>nk);await wait(4000);
+      const a=sent().find(e=>e.event_type==='round_abandoned')||{};
+      ok('closed-tab round reported',a.round_id==='11111111-2222-4333-8444-555555555555'&&a.answered===3,JSON.stringify(a));
+      ok('marker cleared',(localStorage.getItem('bn-live-v1')||'')==='');
+    }
+    else if(SC==='hidden'){
+      TRACK.init(()=>nk);round();window.dispatchEvent(new Event('pagehide'));window.dispatchEvent(new Event('pagehide'));
+      await wait(1000);TRACK.roundEnd({score:9,points:130,ms:30000,passed:true,timeouts:0});await wait(4000);
+      const ev=sent(),ab=ev.filter(e=>e.event_type==='round_abandoned'),rc=ev.find(e=>e.event_type==='round_complete')||{};
+      ok('one abandoned report while hidden',ab.length===1,ab.length);
+      ok('keepalive used on hide',calls[0]&&calls[0].o.keepalive===true);
+      ok('finished round shares the round id',ab[0]&&rc.round_id===ab[0].round_id);
+    }
+  }catch(e){ok('no exception',false,e&&e.stack||e)}
+  ok('no page errors',errors.length===0,errors.join(' | '));
+  parent.postMessage({sc:SC,results:R},'*');
+})();
+</script>
+</body></html>

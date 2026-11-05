@@ -1,6 +1,6 @@
 # Brainbox Ninja
 
-A free, timed puzzle game for ages 4 to 90 (kids, teens, adults, elders). Maths, proverbs, riddles, logic, memory, word puzzles and more. Plain HTML, CSS and JavaScript. No build step, no frameworks, no sign-up. The global leaderboard uses Supabase (free tier) with anonymous sign-in.
+A free, timed puzzle game for ages 4 to 90 (kids, teens, adults, elders). Maths, proverbs, riddles, logic, memory, word puzzles and more. Plain HTML, CSS and JavaScript. No build step, no frameworks, no sign-up. The global leaderboard and the anonymous gameplay stats use Supabase (free tier).
 
 ## Project files
 
@@ -12,10 +12,18 @@ js/bank.js        extra proverbs, riddles, logic puzzles, words and generators
 js/config.js      your Supabase Project URL and Publishable key (fill these in)
 js/online.js      Supabase connection: anonymous sign-in, score upload, top 50
 js/vendor/        the official Supabase JavaScript client (supabase-js 2.118.0), loaded on demand
+js/track.js       anonymous gameplay stats: queues events and sends them to Supabase in the background
 js/app.js         game logic, screens, scoring, leaderboard screen
+admin.html        admin dashboard (not linked from the game; sign-in by email link, admins only)
+js/admin.js       dashboard logic and SVG charts
+css/admin.css     dashboard styles (reuses the Naija Green tokens from css/style.css)
 supabase/leaderboard.sql   optional SQL: one-row-per-player view, data checks, indexes
+supabase/schema.sql        SQL for gameplay stats: events table, Row Level Security, admin list, dashboard function
+supabase/seed_test.sql     made-up test players for previewing the dashboard (easy to delete)
+tests/            browser test pages and the database rules check (not deployed, see .vercelignore)
 favicon.svg       site icon
 vercel.json       optional Vercel settings (headers)
+CLAUDE.md         working notes and rules for AI coding assistants
 ```
 
 ## Run it on your computer
@@ -69,6 +77,68 @@ The leaderboard is global and stored in Supabase (`public.leaderboard`):
 **Set it up:** paste your Project URL and Publishable key into `js/config.js`, then run `supabase/leaderboard.sql` in the Supabase SQL Editor (recommended, not required).
 
 **Scores are not cheat-proof.** Scores are worked out in the player's browser, so a determined person can send any number with their own anonymous session. The SQL checks block negative scores and long names only. A competitive leaderboard would need the server to set the questions and mark the answers (for example a Supabase Edge Function), so it never trusts a score from the browser.
+
+## Gameplay stats and the admin dashboard
+
+The game sends anonymous gameplay events to the same Supabase project as the leaderboard (`public.events`), and `admin.html` shows them to signed-in admins.
+
+**Events** (sent by `js/track.js`):
+
+| Event | When |
+|---|---|
+| `session_start` | the game is opened, or the player comes back after 30+ minutes away |
+| `round_complete` | a round of 10 questions is finished (score, points, time, pass, timeouts, adaptive mix) |
+| `round_abandoned` | a round is left part-way, or the tab is closed mid-round (reported on the next visit if needed) |
+
+Tracking never blocks the game. Events wait in a queue in the browser (`bn-q-v1`, at most 200) and are sent in the background in batches. If Supabase is down, slow, paused, blocked or not configured, the game plays exactly as before and the queue is retried later (next event, when the connection returns, next visit).
+
+**Privacy (children play this game):**
+- No emails, real names, locations or IP addresses are stored. Players never sign in for stats.
+- A browser is identified only by a random ID (`bn-device-v1`), not linked to the leaderboard account.
+- Events include the player's ninja name (nickname), so stats can be matched to the leaderboard later. The How to play screen asks players to use a nickname, not their real name.
+- Raw events are deleted after 13 months by a nightly job.
+- Supabase's own request logs briefly record IP addresses (outside our tables; about a day on the free plan).
+- The welcome screen says: "We collect anonymous gameplay stats and ninja names to improve the game, never real names or personal details."
+
+**Security:** only the Publishable key is in the browser. Row Level Security lets anyone *insert* events (with checked values) but nobody can read, change or delete them through the API. Only emails in the `private.admins` list, signed in with an email link, can read the stats. Never put a `service_role` or `sb_secret_` key in this repo.
+
+### Set it up (once)
+
+1. **Supabase project.** Use the existing leaderboard project; `js/config.js` already has its URL and Publishable key. (For a new project, pick the **West EU (London)** region, the closest to Nigeria, then paste its Project URL and Publishable key into `js/config.js`.)
+2. **Run the SQL.** Supabase dashboard → **SQL Editor** → **New query** → paste all of `supabase/schema.sql` → **Run**. It should finish with "Success. No rows returned".
+3. **Add yourself as an admin.** In a new query, run (with your email):
+   `insert into private.admins (email) values ('you@example.com') on conflict do nothing;`
+4. **Create your admin login.** **Authentication** → **Users** → **Add user** → **Create new user** → enter the same email, tick **Auto Confirm User**, set any password (you will sign in by email link) → **Create user**.
+5. **Allow the sign-in link to return to the dashboard.** **Authentication** → **URL Configuration** → **Redirect URLs** → **Add URL**: `https://YOUR-SITE.vercel.app/admin` (and `http://localhost:8000/admin.html` for local testing) → **Save**.
+6. **Open the dashboard** at `https://YOUR-SITE.vercel.app/admin`, enter your email and click the link in the email. Supabase's built-in email sends only a few emails per hour, and only to members of your Supabase team, which includes you.
+7. **Optional preview data.** Run `supabase/seed_test.sql` to add about 300 made-up players (nicknames `Test001`…). The dashboard shows a yellow banner while they exist. Delete them with:
+   `delete from public.events where is_test;`
+8. **Optional check.** `powershell -ExecutionPolicy Bypass -File tests\rls-check.ps1` confirms with the public key that reading is refused and bad values are rejected. It adds one row; remove it with `delete from public.events where app_version = 'rls-check';`
+
+**Free projects pause** after about 7 days with no activity. Players keep it awake, but a quiet week can pause it. While paused, the game still works and events wait in each player's queue. To resume: open supabase.com/dashboard → your project → **Restore project** (takes a few minutes). The dashboard shows a "could not load" message while the project is paused.
+
+### What the dashboard shows
+
+Filters: last 7 days, last 30 days or all time (up to 13 months), and age band. Days are counted in Lagos time.
+
+| Section | Target (from the product doc) |
+|---|---|
+| 1. Overview: players (unique devices), new players, rounds, rounds per player, average session, first-session rounds | 3+ rounds in the first session |
+| 2. Retention: day-1 and day-7 return (played again exactly 1 or 7 days after their first day) | 20% on day 7 |
+| 3. Players by age band (share of players and of rounds) | no age group below 10% |
+| 4. Pass rate by age band × puzzle type × level, flagged too hard (<50%) or too easy (>90%) | Beginner 60–75% |
+| 5. Adaptive difficulty: how often boosts and warm-ups trigger, and their pass rates | none set |
+| 6. Timeouts: share of questions where the timer ran out | under 10% |
+| 7. Most and least played puzzle types | none set |
+| 8. Daily active players and rounds (line charts) | none set |
+
+### Tests
+
+Serve the folder (`python -m http.server 8000`) and open:
+- `tests/track-test.html`: tracking with a fake network: offline, slow, rejected, blocked storage, queue cap, closed tab (about a minute).
+- `tests/game-smoke.html?mode=ok|down|blocked`: plays real rounds with the network unreachable or storage blocked. The title shows PASS or FAIL. It clears this site's saved progress (`bn-*` keys) on localhost.
+- `tests/admin-preview.html`: the dashboard with made-up numbers (`?data=empty|quiet|login|denied` for the other states).
+- `tests/phone.html?src=…`: any of these at a true 375 px phone width.
 
 ## Adaptive difficulty
 

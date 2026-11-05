@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>track.js tests</title>
+<style>body{font:15px system-ui,sans-serif;margin:16px;color:#14261C;background:#F7F2E3}table{border-collapse:collapse;width:100%}td,th{padding:6px 8px;border-bottom:1px solid #D8D2B8;text-align:left;vertical-align:top}.p{color:#0A5C36;font-weight:700}.f{color:#B4440A;font-weight:700}iframe{display:none}code{overflow-wrap:anywhere}</style>
+</head><body>
+<h1>track.js tests</h1>
+<p>Runs each scenario in its own frame with a fake network (nothing is sent to Supabase). Open this page from a local server, for example <code>http://localhost:8000/tests/track-test.html</code>. Takes about a minute.</p>
+<p id="sum">Running…</p>
+<table><thead><tr><th>Result</th><th>Check</th><th>Detail</th></tr></thead><tbody id="out"></tbody></table>
+<script>
+const SCENARIOS=['unconfigured','secret','ok','down','cap','bad','hang','blocked','abandon','reopen','hidden'];
+const out=document.getElementById('out'),sum=document.getElementById('sum');let pass=0,fail=0;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function run(i){
+  if(i>=SCENARIOS.length){sum.textContent=(fail?'FAIL':'PASS')+': '+pass+' passed, '+fail+' failed';sum.className=fail?'f':'p';document.title=sum.textContent;return}
+  const f=document.createElement('iframe');let done=false;
+  const finish=results=>{if(done)return;done=true;window.removeEventListener('message',onMsg);
+    results.forEach(([n,ok,d])=>{ok?pass++:fail++;out.insertAdjacentHTML('beforeend',`<tr><td class="${ok?'p':'f'}">${ok?'PASS':'FAIL'}</td><td>${esc(n)}</td><td><code>${esc(d)}</code></td></tr>`)});
+    f.remove();run(i+1)};
+  const onMsg=e=>{if(e.data&&e.data.sc===SCENARIOS[i])finish(e.data.results)};
+  window.addEventListener('message',onMsg);
+  setTimeout(()=>finish([[SCENARIOS[i]+': finished in time',false,'no answer after 60 s']]),60000);
+  f.src='track-frame.html?s='+SCENARIOS[i];document.body.appendChild(f);
+}
+run(0);
+</script>
+</body></html>

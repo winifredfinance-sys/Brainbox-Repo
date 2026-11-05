@@ -1,0 +1,4 @@
+# Not part of the website. tests/ must never be deployed: the smoke test clears this site's saved progress.
+tests/
+supabase/
+CLAUDE.md

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<base href="../">
+<title>Game smoke test</title>
+<link rel="stylesheet" href="css/style.css">
+<style>#results{display:none}</style>
+<!-- Plays real rounds with the real game code, but with a fake network (nothing reaches Supabase).
+     ?mode=ok       stats server answers
+     ?mode=down     everything unreachable, then comes back online
+     ?mode=blocked  localStorage throws on every access
+     ?stop=welcome|play|result  stop there (for screenshots). Results: page title + #results.
+     Only removes this site's own bn-* keys from localStorage. -->
+<script>
+const P=new URLSearchParams(location.search),MODE=P.get('mode')||'ok',STOP=P.get('stop')||'';
+const errors=[],warns=[];
+window.addEventListener('error',e=>errors.push('error: '+e.message));
+window.addEventListener('unhandledrejection',e=>errors.push('unhandled: '+(e.reason&&e.reason.message||e.reason)));
+const _ce=console.error.bind(console);console.error=function(){errors.push('console.error: '+[].map.call(arguments,String).join(' '));_ce.apply(null,arguments)};
+const _cw=console.warn.bind(console);console.warn=function(){warns.push([].map.call(arguments,String).join(' '));_cw.apply(null,arguments)};
+try{Object.keys(localStorage).filter(k=>/^bn-/.test(k)).forEach(k=>localStorage.removeItem(k))}catch(e){}
+if(MODE==='blocked')Object.defineProperty(window,'localStorage',{configurable:true,get(){throw new DOMException('The operation is insecure.','SecurityError')}});
+window.BN_SUPABASE={url:'https://test.supabase.co',key:'sb_publishable_test'};
+const posted=[];let net=MODE==='down'?'down':'ok';
+window.fetch=(u,o)=>{
+  u=String(u);
+  if(net==='down')return Promise.reject(new TypeError('Failed to fetch'));
+  if(/\/rest\/v1\/events/.test(u)){try{posted.push(...JSON.parse(o.body))}catch(e){}return Promise.resolve(new Response(null,{status:201}))}
+  return Promise.reject(new TypeError('Failed to fetch'));  /* leaderboard: unreachable in this test */
+};
+</script>
+</head>
+<body>
+<div class="bg" id="bg" aria-hidden="true"></div>
+<main class="app" id="app"></main>
+<pre id="results"></pre>
+<script src="js/content.js"></script>
+<script src="js/bank.js"></script>
+<script src="js/online.js"></script>
+<script src="js/track.js"></script>
+<script src="js/app.js"></script>
+<script>
+(async()=>{
+  const R=[],ok=(n,c,d)=>R.push([MODE+': '+n,!!c,d==null?'':String(d)]);
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const $=s=>document.querySelector(s);
+  const click=s=>{const e=$(s);if(!e)throw new Error('button not found: '+s);e.click()};
+  const done=()=>{
+    ok('no page errors',errors.length===0,errors.join(' | '));
+    const de=document.documentElement,wide=[...document.querySelectorAll('#app *')].filter(e=>e.getBoundingClientRect().right>de.clientWidth+1).map(e=>e.className||e.tagName).slice(0,5);
+    ok('no horizontal page scroll',de.scrollWidth<=de.clientWidth+1&&!wide.length,'viewport '+innerWidth+' / client '+de.clientWidth+' / scroll '+de.scrollWidth+(wide.length?' / wide: '+wide.join(','):''));
+    const fail=R.filter(r=>!r[1]).length;
+    document.getElementById('results').textContent=JSON.stringify({mode:MODE,pass:R.length-fail,fail,results:R,warnings:warns},null,1);
+    document.title=(fail?'FAIL ':'PASS ')+MODE+' '+(R.length-fail)+'/'+R.length;
+  };
+  try{
+    ok('privacy line on welcome screen',/anonymous gameplay stats/.test($('#app').textContent));
+    if(STOP==='welcome')return done();
+    click('[data-a="start"]');
+    const inp=$('#nick');inp.value='SmokeTest';inp.dispatchEvent(new Event('input',{bubbles:true}));
+    click('[data-a="band"][data-b="adults"]');click('[data-a="cat"][data-c="memory"]');click('[data-a="level"][data-l="0"]');click('[data-a="round"][data-r="0"]');
+    ok('round started',S.screen==='play'&&S.qs.length===10,S.qs.length);
+    for(let i=0;i<10;i++){
+      if($('[data-a="memodone"]'))click('[data-a="memodone"]');
+      if(STOP==='play'&&i===2)return done();
+      const q=S.qs[S.i];
+      if(i===3)await wait(TL.adults[0]*1000+600);                                   /* let the timer run out */
+      else if(i===5||i===8)click(`[data-a="pick"][data-k="${(q.ans+1)%q.opts.length}"]`); /* wrong answer */
+      else click(`[data-a="pick"][data-k="${q.ans}"]`);
+      if(S.picked===null)throw new Error('question '+(i+1)+' not answered');
+      await wait(30);click('[data-a="next"]');
+    }
+    ok('result screen',S.screen==='result',S.screen);
+    ok('score 7 of 10 (7 right, 2 wrong, 1 timeout)',S.res&&S.res.score===7,S.res&&S.res.score);
+    ok('round passed',S.res.pass===true);
+    ok('timeout counted for stats',S.to===1,S.to);
+    const rec0=ALL.SmokeTest&&ALL.SmokeTest.adults_memory_0_0;
+    ok('progress saved as before',rec0&&rec0.p===S.res.pts&&rec0.s>=1,JSON.stringify(rec0));
+    ok('next round unlocked',roundOpen('adults','memory',0,1));
+    if(STOP==='result')return done();
+
+    /* second round: quit after two answers */
+    click('[data-a="again"]');
+    for(let i=0;i<2;i++){if($('[data-a="memodone"]'))click('[data-a="memodone"]');click(`[data-a="pick"][data-k="${S.qs[S.i].ans}"]`);await wait(30);if(i<1)click('[data-a="next"]')}
+    click('[data-a="rounds"]');
+    ok('quit back to rounds',S.screen==='rounds');
+    await wait(5000);
+
+    const types=()=>posted.map(e=>e.event_type).join();
+    if(MODE==='down'){
+      ok('nothing delivered while down',posted.length===0,posted.length);
+      ok('3 events waiting',TRACK.pending()===3,TRACK.pending());
+      net='ok';window.dispatchEvent(new Event('online'));await wait(3000);
+    }
+    ok('events delivered',types()==='session_start,round_complete,round_abandoned',types());
+    ok('queue empty',TRACK.pending()===0,TRACK.pending());
+    const rc=posted.find(e=>e.event_type==='round_complete')||{},ab=posted.find(e=>e.event_type==='round_abandoned')||{};
+    ok('round_complete matches the game',rc.score===7&&rc.timeouts===1&&rc.points===S_res_pts()&&rc.passed===true&&rc.age_band==='adults'&&rc.puzzle_type==='memory'&&rc.level===0&&rc.round_no===0&&rc.answered===10&&rc.nickname==='SmokeTest',JSON.stringify(rc));
+    ok('round_abandoned has progress',ab.answered===2&&ab.score===2&&ab.passed===null&&ab.round_id!==rc.round_id,JSON.stringify(ab));
+  }catch(e){ok('no exception',false,e&&e.stack||e)}
+  done();
+})();
+function S_res_pts(){return ALL.SmokeTest&&ALL.SmokeTest.adults_memory_0_0&&ALL.SmokeTest.adults_memory_0_0.p}
+</script>
+</body>
+</html>

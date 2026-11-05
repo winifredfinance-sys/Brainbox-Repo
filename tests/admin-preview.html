@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<base href="../">
+<title>Admin preview (sample data)</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="admin">
+<!-- Shows admin.html with MADE-UP numbers and a fake sign-in, so the layout can be checked without Supabase.
+     ?data=sample (default) | quiet (data exists but none in range) | empty (no events at all) | login | denied -->
+<main class="adm" id="adm" aria-live="polite"></main>
+<script src="js/content.js"></script>
+<script src="js/config.js"></script>
+<script>
+(()=>{
+  const MODE=new URLSearchParams(location.search).get('data')||'sample';
+  let seed=7;const rand=()=>{seed=(seed*16807)%2147483647;return (seed-1)/2147483646};
+  const today=new Date(Date.now()+3600e3).toISOString().slice(0,10);
+  const day=i=>new Date(Date.parse(today)-i*864e5).toISOString().slice(0,10);
+  function stats(){
+    const bands=['kids','teens','adults','elders'],quiet=MODE==='quiet'||MODE==='empty';
+    const days=Array.from({length:30},(_,i)=>day(29-i)).map((d,i)=>({day:d,players:quiet?0:Math.round(18+i*1.4+rand()*14),rounds:quiet?0:Math.round(60+i*5+rand()*50)}));
+    const pass=[],timeouts=[],types=[];
+    if(!quiet)bands.forEach(b=>{
+      catsFor(b).forEach(c=>[0,1,2].forEach(l=>{
+        const n=Math.round((l===0?90:l===1?40:14)*(.4+rand())*(b==='elders'?.3:1));
+        let r=(l===0?.7:l===1?.62:.5)+(rand()-.5)*.3;if(c.id==='count'||c.id==='patterns')r+=.25;if(c.id==='proverbs')r-=.2;r=Math.max(.05,Math.min(.99,r));
+        if(n)pass.push({band:b,type:c.id,level:l,n,passed:Math.round(n*r)});
+      }));
+      [0,1,2].forEach(l=>{const a=Math.round(900*(.4+rand())*(b==='elders'?.3:1));timeouts.push({band:b,level:l,answered:a,timeouts:Math.round(a*((b==='elders'?.12:.05)+l*.02+rand()*.03))})});
+      catsFor(b).forEach(c=>types.push({band:b,type:c.id,rounds:Math.round(rand()*220*(b==='elders'?.3:1)),players:Math.round(rand()*60)}));
+    });
+    return {
+      overview:{players:quiet?0:612,new_players:quiet?0:241,rounds_completed:quiet?0:3874,rounds_abandoned:quiet?0:402},
+      sessions:{sessions:quiet?0:1490,avg_seconds:quiet?null:463},
+      first_session:{players:quiet?0:241,three_plus:quiet?0:118,median:quiet?null:2.5},
+      retention:{d1_cohort:quiet?0:230,d1_returned:quiet?0:71,d7_cohort:quiet?0:150,d7_returned:quiet?0:34},
+      bands:quiet?[]:[{band:'kids',players:190,rounds:1300},{band:'teens',players:160,rounds:1010},{band:'adults',players:240,rounds:1420},{band:'elders',players:41,rounds:144}],
+      bands_total:{players:quiet?0:612,rounds:quiet?0:3874},
+      pass,adaptive:quiet?[]:[{adj:0,started:3610,completed:3260,passed:2280},{adj:1,started:420,completed:390,passed:310},{adj:-1,started:246,completed:224,passed:121}],
+      timeouts,types,daily:days,
+      meta:{events:MODE==='empty'?0:9123,test_events:MODE==='empty'?0:2510,first_event:day(44),db_bytes:31*1048576,today,generated_at:new Date().toISOString()}
+    };
+  }
+  const session=MODE==='login'?null:{user:{id:'0',email:'owner@example.com',is_anonymous:false}};
+  const fake={
+    auth:{getSession:async()=>({data:{session}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),
+      signInWithOtp:async()=>({error:null}),signOut:async()=>({error:null})},
+    rpc:async()=>MODE==='denied'?{data:null,error:{code:'42501',message:'not allowed'}}:{data:stats(),error:null}
+  };
+  window.supabase={createClient:()=>fake};
+})();
+</script>
+<script src="js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>Phone-width frame</title>
+<style>html,body{margin:0;background:#888}iframe{display:block;border:0;background:#fff}</style></head>
+<body>
+<!-- Shows another page at a true phone width (default 375 px), e.g. phone.html?src=tests/game-smoke.html%3Fstop%3Dresult&w=375&h=1400
+     Used for screenshots, because desktop browsers will not make a window narrower than about 500 px. -->
+<script>
+const P=new URLSearchParams(location.search),f=document.createElement('iframe');
+f.width=P.get('w')||375;f.height=P.get('h')||812;f.src='../'+(P.get('src')||'index.html');
+document.body.appendChild(f);
+/* copy the framed page's title and test results up here, so a headless run can read them */
+const pre=document.createElement('pre');pre.id='results';pre.hidden=true;document.body.appendChild(pre);
+setInterval(()=>{try{document.title=f.contentDocument.title;const r=f.contentDocument.getElementById('results');if(r)pre.textContent=r.textContent}catch(e){}},250);
+</script>
+</body></html>

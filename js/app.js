@@ -87,6 +87,8 @@ NET.on(()=>{
   else if(S.screen==='home'&&el('minibody'))el('minibody').innerHTML=miniBody();
   else if(S.screen==='result'&&el('sync'))el('sync').textContent=syncText();
 });
+/* ---------- anonymous gameplay stats (js/track.js). Wrapped so stats can never stop or slow the game. ---------- */
+const tr=(f,a)=>{try{if(typeof TRACK!=='undefined')TRACK[f](a)}catch(e){}};
 
 /* ---------- state ---------- */
 let S={screen:'welcome',from:'home',band:null,cat:null,level:0,round:0,qs:[],i:0,score:0,pts:0,gain:0,totalMs:0,picked:null,memoDone:false,qStart:0,limit:0,rem:0,res:null};
@@ -105,7 +107,7 @@ function welcome(){
   <button class="btn primary big" data-a="start">Start Game</button>
   <button class="btn" data-a="howto">How to play</button>
   <button class="link" data-a="board">View the leaderboard</button>
-  <p class="foot">Free to play. No ads and no downloads.</p></section>`;
+  <p class="foot">Free to play. No ads. We collect anonymous gameplay stats and ninja names to improve the game, never real names or personal details.</p></section>`;
 }
 function howto(){
   return `<button class="link" data-a="hback">← Back</button>
@@ -231,7 +233,7 @@ function render(){
   const nb=document.getElementById('nextbtn');if(nb)nb.focus();
 }
 function enter(){app.classList.remove('enter');void app.offsetWidth;app.classList.add('enter')}
-function go(s){if(s!=='play')clearInterval(tick);if(s==='board'&&S.screen!=='board')S.from=S.screen;if(s==='howto'&&S.screen!=='howto')S.hfrom=S.screen;S.screen=s;render();if(s==='board'||s==='home')NET.refresh(NICK);enter();window.scrollTo(0,0)}
+function go(s){if(S.screen==='play'&&s!=='play'&&S.live)tr('roundQuit');if(s!=='play')clearInterval(tick);if(s==='board'&&S.screen!=='board')S.from=S.screen;if(s==='howto'&&S.screen!=='howto')S.hfrom=S.screen;S.screen=s;render();if(s==='board'||s==='home')NET.refresh(NICK);enter();window.scrollTo(0,0)}
 
 /* ---------- timed round ---------- */
 function startQ(){S.qStart=Date.now();S.limit=TL[S.band][S.level]*1000;clearInterval(tick);tick=setInterval(onTick,100)}
@@ -249,11 +251,14 @@ function answer(k){
   const q=S.qs[S.i],used=Math.min(S.limit,Date.now()-S.qStart);
   S.totalMs+=used;S.rem=Math.max(0,S.limit-used);S.picked=k;S.gain=0;
   if(k===q.ans){S.score++;S.gain=10+Math.floor(5*S.rem/S.limit);S.pts+=S.gain}
+  if(k===-1)S.to=(S.to||0)+1; /* timeouts, for stats only */
+  tr('progress',{answered:S.i+1,score:S.score,points:Math.round(S.pts*MULT[S.level]),ms:S.totalMs,timeouts:S.to||0});
   render();
 }
 function startRound(){
   S.live=true; /* set when a round starts; finish() clears it so one round is scored and sent only once */
   S.adj=adaptAdj();S.qs=build(S.band,S.cat,S.level,S.adj);S.i=0;S.score=0;S.pts=0;S.totalMs=0;S.picked=null;S.memoDone=false;
+  S.to=0;tr('roundStart',{band:S.band,cat:S.cat,level:S.level,round:S.round,adj:S.adj,total:S.qs.length});
   go('play');if(!S.qs[0].memo)startQ();
 }
 function finish(){
@@ -263,6 +268,7 @@ function finish(){
   LP[k]={s:Math.max(old.s,st),p:Math.max(old.p,pts),t:pass&&(!old.t||S.totalMs<old.t)?S.totalMs:old.t};
   saveLP();recordSkill(ratio);
   NET.sync(); /* the round is complete and its points are final: send the new total (only if it went up) */
+  tr('roundEnd',{score:S.score,points:pts,ms:S.totalMs,passed:pass,timeouts:S.to||0});
   S.res={score:S.score,n,pts,ms:S.totalMs,stars:st,pass,newBest:pts>old.p,round:S.round,cleared:pass&&levelDone(S.band,S.cat,S.level),passed:passedRounds(S.band,S.cat,S.level),nextAdj:adaptAdj()};
   S.res.shout=S.res.cleared?pick(CLEARED):pass?pick(st===3?PERFECT:SHOUTS):pick(TRY);
   go('result');
@@ -319,5 +325,6 @@ document.addEventListener('keydown',e=>{
   bg.innerHTML=g.map((c,i)=>`<span style="--x:${(i*37+8)%94}%;--y:${(i*53+6)%92}%;--s:${rnd(30,64)}px;--t:${rnd(14,26)}s;--dl:-${rnd(0,14)}s;--r0:${rnd(-25,25)}deg;--r1:${rnd(-40,40)}deg;--dx:${rnd(-40,40)}px;--dy:${rnd(-60,60)}px">${esc(c)}</span>`).join('');
 })();
 
+tr('init',()=>NICK);
 NET.init(()=>({nick:NICK,total:totals().total}));
 render();
