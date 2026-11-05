@@ -145,6 +145,7 @@
       ${sPass(D)}
       <div class="grid2">${sAdaptive(D)}${sTimeouts(D)}</div>
       <div class="grid2">${sTypes(D)}${sDaily(D)}</div>
+      ${sDailyTarget(D)}
       <p class="foot meta">${nf(M.events)} events stored · database ${(M.db_bytes/1048576).toFixed(1)} MB of 500 MB free${M.db_bytes>DB_LIMIT*.8?' '+badge('warn','nearly full'):''} · updated ${new Date(M.generated_at||Date.now()).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'})}${st.err&&st.view==='dash'?' · <span class="bad-t">last refresh failed: '+esc(st.err)+'</span>':''}</p>`;
   }
 
@@ -245,11 +246,32 @@
     return sec(8,'Activity over time','Players with at least one round, and finished rounds, per day.','None set in the product doc.',body);
   }
 
+  /* 9. Daily challenge */
+  function sDailyTarget(D){
+    const T=D.daily_target,o=D.overview||{};
+    if(!T)return sec(9,'Daily challenge','Players who reached their daily points target, and how long their streaks are.','None set yet.',
+      empty('The database has not been upgraded for the daily challenge yet. Run <code>supabase/schema.sql</code> again in the SQL Editor (it is safe to re-run).'));
+    const players=+T.players||0,active=+T.active||+o.players||0,share=ratio(players,active);
+    /* one point per day in the period, 0 on days without a hit */
+    const hits=new Map((D.daily_hits||[]).map(x=>[x.day,+x.players||0]));
+    (st.data||{}).daily_hits_full=(D.daily||[]).map(d=>({day:d.day,hitters:hits.get(d.day)||0}));
+    const tiles=[
+      ['Players who hit the target',nf(players),active?fp(share)+' of '+nf(active)+' players with a finished round':'no finished rounds in this period'],
+      ['Times the target was hit',nf(T.hits),'one per player per day'],
+      ['Average streak',T.avg_streak==null?'–':(+T.avg_streak).toFixed(1)+' days','average of each player’s best streak in this period'],
+      ['Longest streak',T.best_streak==null?'–':nf(T.best_streak)+' days','best in this period']
+    ];
+    const body=players?`<div class="tiles">${tiles.map(([l,v,sub])=>`<div class="tile"><span class="tl">${l}</span><b>${v}</b><small>${esc(sub)}</small></div>`).join('')}</div>
+      <h3>Players hitting the target per day</h3><div class="chart" data-src="daily_hits_full" data-k="hitters" data-l="players hit the target"></div>`
+      :empty('Nobody has reached the daily target in this period yet. Targets per day: '+BAND_IDS.map(id=>esc(band(id).range)+' '+nf(DAILY[id])).join(' · ')+' points.');
+    return sec(9,'Daily challenge','Players who reached their daily points target (Lagos days), and their streaks of consecutive days.','None set yet. Targets: '+BAND_IDS.map(id=>esc(band(id).range)+' '+nf(DAILY[id])).join(' · ')+' points a day.',body);
+  }
+
   /* ---------- SVG line chart with a hover crosshair and tooltip ---------- */
   const nice=m=>{if(m<=4)return 4;const p=Math.pow(10,Math.floor(Math.log10(m))),f=m/p;return (f<=1?1:f<=2?2:f<=5?5:10)*p};
   function drawCharts(){
-    const days=(st.data&&st.data.daily)||[];
     root.querySelectorAll('.chart').forEach(el=>{
+      const days=(st.data&&st.data[el.dataset.src||'daily'])||[];
       const k=el.dataset.k,label=el.dataset.l,vals=days.map(d=>+d[k]||0);
       const W=Math.max(260,el.clientWidth||600),H=170,m={l:40,r:14,t:10,b:26},iw=W-m.l-m.r,ih=H-m.t-m.b;
       const top=nice(Math.max(...vals,1)),n=vals.length;
