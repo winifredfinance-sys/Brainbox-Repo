@@ -162,7 +162,7 @@ function howto(){
   return `<button class="link" data-a="hback">← Back</button>
   <header class="top"><h1>How to play</h1><p class="lead">Four quick steps. A round takes about two minutes.</p></header>
   <ol class="steps">
-   <li><strong>Choose your ninja name</strong><span>This is the name shown on the global leaderboard, up to 20 letters. Use a nickname, not your real full name. Tap Surprise me for ideas.</span></li>
+   <li><strong>Choose your ninja name</strong><span>This is the name shown on the global leaderboard, up to 20 letters. Use a nickname, not your real full name. Tap Shuffle for a new one, or type your own.</span></li>
    <li><strong>Pick your age range</strong><span>You get puzzles made for your age: 4–10, 11–17, 18–59 or 60+.</span></li>
    <li><strong>Choose a puzzle type</strong><span>Maths, words, proverbs, riddles, memory and more. Start at Beginner and work up to Hard.</span></li>
    <li><strong>Answer before the timer runs out</strong><span>Each round has 10 questions. Tap an answer, or press A to D on a keyboard. A quick right answer earns ${SPEED.max} points, falling to ${SPEED.min} as the clock runs down.</span></li>
@@ -175,8 +175,8 @@ function home(){
   return `<button class="link" data-a="welcome">← Title screen</button>
   <header class="hero">${MASCOT}<div class="top"><h1>Get ready</h1><p class="lead">Pick a ninja name and your age range. <button class="link inline" data-a="howto">How to play</button></p></div></header>
   <section class="panel"><label for="nick">Your ninja name</label>
-   <div class="row"><input id="nick" maxlength="20" autocomplete="off" placeholder="e.g. SwiftMango42" value="${esc(NICK)}"><button class="btn" type="button" data-a="rand">Surprise me</button></div>
-   <p id="msg" class="msg" role="alert"></p>${fxPanel()}</section>
+   <div class="row"><input id="nick" maxlength="20" autocomplete="off" placeholder="e.g. BraveMango4821" value="${esc(NICK)}"><button class="btn" type="button" data-a="rand">Shuffle</button></div>
+   <p id="msg" class="msg" role="alert"></p><p id="nmsg" class="foot" role="status"></p>${fxPanel()}</section>
   <section id="daily" class="panel daily">${dailyCard()}</section>
   <h2 class="sub">Choose your age range</h2>
   <div class="grid ages">${BANDS.map(b=>`<button class="card" data-a="band" data-b="${b.id}" style="--c:var(--${b.id});--cbg:var(--${b.id}-bg)"><span class="rng">${b.range}</span><span class="nm">${b.name}</span><span class="bl">${b.blurb}</span><span class="pr">${t[b.id].toLocaleString('en-NG')} pts</span></button>`).join('')}</div>
@@ -354,16 +354,34 @@ function finish(){
 }
 
 /* ---------- events ---------- */
-const ADJ=['Swift','Clever','Sharp','Brave','Calm','Quick','Bold','Silent','Lucky','Mighty','Wise','Zesty'],NOUN=['Mango','Jollof','Falcon','Panther','Danfo','Eagle','Suya','Tiger','Drum','Cobra','Baobab','Comet'];
+/* ninja names: Adjective + Noun + 3-4 digits (about 80 million combinations). Simple, friendly words safe for ages 4-10;
+   no lookalike pairs. Every pair fits in 20 characters with a 4-digit number. */
+const ADJ=['Brave','Bright','Calm','Clever','Cheerful','Curious','Daring','Eager','Fearless','Friendly','Gentle','Glad','Golden','Happy','Honest','Jolly','Kind','Lively','Lucky','Merry','Mighty','Noble','Patient','Polite','Proud','Quick','Quiet','Ready','Royal','Shiny','Silent','Smart','Speedy','Steady','Strong','Sunny','Swift','Tidy','Wise','Witty','Zesty','Bold','Busy','Cool','Crisp','Dazzling','Breezy','Bouncy','Chirpy','Cosmic','Crimson','Dreamy','Epic','Fancy','Frosty','Fuzzy','Giant','Grand','Hopeful','Humble','Icy','Jazzy','Keen','Little','Magic','Mellow','Misty','Nimble','Peaceful','Playful','Sporty','Starry','Stellar','Super','Thankful','Valiant','Vivid','Warm','Zippy','Amber','Azure','Brisk','Clear','Radiant','Snowy','Tough','Wild'];
+const NOUN=['Lion','Tiger','Eagle','Falcon','Panther','Zebra','Giraffe','Elephant','Dolphin','Turtle','Parrot','Rabbit','Hippo','Koala','Panda','Otter','Owl','Penguin','Cheetah','Gecko','Peacock','Antelope','Hedgehog','Flamingo','Mango','Jollof','Suya','Danfo','Baobab','Plantain','Akara','Zobo','Guava','Pawpaw','Pepper','Lemon','Pancake','Cookie','Biscuit','River','Comet','Rainbow','Thunder','Meadow','Forest','Island','Ocean','Breeze','Pebble','Maple','Cactus','Lotus','Willow','Canyon','Lagoon','Sunrise','Cloud','Ember','Rocket','Planet','Galaxy','Meteor','Orbit','Nova','Moon','Star','Saturn','Drum','Kite','Lantern','Compass','Anchor','Whistle','Marble','Ribbon','Crayon','Trumpet','Bicycle','Balloon','Pencil','Magnet','Puzzle','Robot','Castle','Crown','Shield','Arrow','Feather','Button','Banjo','Acorn','Glacier','Volcano','Harbour'];
+/* a name nobody on this device or on the loaded leaderboard already uses; the online check (NET.nameTaken) runs after */
+const usedNames=()=>new Set(Object.keys(ALL).concat((NET.board.rows||[]).map(r=>r.player_name)).map(n=>String(n).toLowerCase()));
+function freshName(){const used=usedNames();let n='';for(let i=0;i<50;i++){n=pick(ADJ)+pick(NOUN)+rnd(100,9999);if(n.length<=20&&!used.has(n.toLowerCase()))break}return n}
+let nameSeq=0;
+function setNick(n,why){NICK=cleanNick(n);ls.set('bn-nick',NICK);const i=document.getElementById('nick');if(i&&i.value!==NICK&&why!=='typed')i.value=NICK;const dc=document.getElementById('daily');if(dc)dc.innerHTML=dailyCard()}
+/* shuffle: show a fresh name at once, then check it online and replace it if someone already has it */
+async function shuffleName(){
+  const my=++nameSeq;let n=freshName();setNick(n);nameNote('');
+  for(let k=0;k<4;k++){const t=await NET.nameTaken(n);if(my!==nameSeq)return;if(t!==true)break;n=freshName();setNick(n)}
+}
+/* typed names: a gentle note if someone else on the leaderboard already uses it (still allowed) */
+let nameTimer=null;
+function nameNote(t){const m=document.getElementById('nmsg');if(m)m.textContent=t}
+function checkTyped(){clearTimeout(nameTimer);const n=NICK,my=++nameSeq;nameNote('');if(n.length<2)return;
+  nameTimer=setTimeout(async()=>{const t=await NET.nameTaken(n);if(my===nameSeq&&t===true)nameNote('Another player already uses this name. You can keep it, or tap Shuffle for one of your own.')},700)}
 app.addEventListener('input',e=>{
-  if(e.target.id==='nick'){NICK=cleanNick(e.target.value);ls.set('bn-nick',NICK);const d=document.getElementById('daily');if(d)d.innerHTML=dailyCard()}
+  if(e.target.id==='nick'){setNick(e.target.value,'typed');checkTyped()}
 });
 app.addEventListener('click',e=>{
   const t=e.target.closest('[data-a]');if(!t)return;
   const a=t.dataset.a;
-  if(a==='rand'){NICK=cleanNick(pick(ADJ)+pick(NOUN)+rnd(1,99));ls.set('bn-nick',NICK);const i=document.getElementById('nick');if(i)i.value=NICK;const dc=document.getElementById('daily');if(dc)dc.innerHTML=dailyCard();const m=document.getElementById('msg');if(m)m.textContent=''}
+  if(a==='rand'){shuffleName();const m=document.getElementById('msg');if(m)m.textContent=''}
   else if(a==='band'){
-    if(NICK.length<2){const m=document.getElementById('msg'),i=document.getElementById('nick');if(m)m.textContent='Pick a ninja name first. Use at least 2 letters, or tap Surprise me.';if(i)i.focus();return}
+    if(NICK.length<2){const m=document.getElementById('msg'),i=document.getElementById('nick');if(m)m.textContent='Pick a ninja name first. Use at least 2 letters, or tap Shuffle.';if(i)i.focus();return}
     S.band=t.dataset.b;loadLP();go('cats');
   }
   else if(a==='start')go('home');

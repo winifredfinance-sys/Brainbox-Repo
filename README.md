@@ -101,6 +101,21 @@ The leaderboard is global and stored in Supabase (`public.leaderboard`):
 
 **Scores are not cheat-proof.** Scores are worked out in the player's browser, so a determined person can send any number with their own anonymous session. The SQL checks block negative scores and long names only. A competitive leaderboard would need the server to set the questions and mark the answers (for example a Supabase Edge Function), so it never trusts a score from the browser.
 
+### Leaderboard security (`supabase/hardening.sql`)
+
+The publishable key has to be in the page, so anyone can talk to the database with it. Run `supabase/hardening.sql` once in the SQL Editor (safe to re-run). It:
+
+- moves impossible scores (over 234,000, the real maximum) and bad names into a private backup, `private.leaderboard_removed`, and deletes them from the board;
+- keeps one entry per player account and nickname (older duplicates are backed up too);
+- makes `submit_score()` the only way to save a score. It uses the player's own anonymous account id, lets a total grow by at most 400 points per 20 seconds and 25,000 per day, and never lowers a best score;
+- removes direct insert, update and delete for browsers (reading stays public).
+
+Ban a cheater: `insert into private.banned_users (user_id, reason) values ('<their user_id>', 'cheating');`. This makes cheating slow and limited, not impossible, because scores are still worked out in the browser.
+
+**Supabase setting to check:** Authentication → Rate Limits → "anonymous sign-ins" (default 30 per hour per IP address). Many players in Nigeria share one IP address on mobile networks and school Wi-Fi; raise it (for example to 300) so scores are not lost. The game now signs in only when there is a score to save, which already uses far fewer sign-ins.
+
+**Ninja names** are Adjective + Noun + 3–4 digits (for example BraveMango4821) from 87 adjectives and 94 nouns chosen to be friendly for ages 4–10: about 81 million combinations. Shuffle avoids names already in use; players can also type their own.
+
 ## Gameplay stats and the admin dashboard
 
 The game sends anonymous gameplay events to the same Supabase project as the leaderboard (`public.events`), and `admin.html` shows them to signed-in admins.
