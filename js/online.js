@@ -17,7 +17,7 @@ const NET=(()=>{
   const configured=!secret&&/^https:\/\/\S+$/.test(url)&&!!key&&!/YOUR-/.test(url+key);
 
   const board={status:configured?'idle':'off',rows:[],me:null,at:0,nick:null};
-  const api={TOP,configured,board,uid:null,syncState:'',on,refresh,sync,init};
+  const api={TOP,configured,board,uid:null,syncState:'',on,refresh,sync,init,nameTaken};
   const subs=[];
   function on(f){subs.push(f)}
   const emit=()=>subs.forEach(f=>{try{f()}catch(e){console.error(e)}});
@@ -49,7 +49,13 @@ const NET=(()=>{
     if(!sb)sb=window.supabase.createClient(url,key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'bn-auth'}});
     return sb;
   }
-  /* reuse the saved anonymous session if there is one, otherwise create a new anonymous user */
+  /* the saved session, if any, without creating a new anonymous user (used when only reading) */
+  async function knownUser(){
+    try{const c=await client(),{data}=await c.auth.getSession();const u=data&&data.session&&data.session.user;if(u)api.uid=u.id;return u||null}catch(e){return null}
+  }
+  /* reuse the saved anonymous session if there is one, otherwise create a new anonymous user.
+     Only called when there is a score to save: Supabase limits new anonymous sign-ins per internet address
+     (30 an hour by default), and many players in Nigeria share one address on mobile networks. */
   function signIn(){
     return authP||(authP=(async()=>{
       const c=await client();
@@ -75,12 +81,21 @@ const NET=(()=>{
     try{
       const c=await signIn();
       let m=readSent();if(m.uid!==api.uid)m={uid:api.uid,sent:{}};
+      let stored=total;
       if(total>(+m.sent[nick]||0)){
-        const {error}=await c.from(TABLE).insert({user_id:api.uid,player_name:nick,score:total});
-        if(error)throw error;
-        m.sent[nick]=total;ls.set(SENT,JSON.stringify(m));
+        /* submit_score (supabase/hardening.sql) checks the name and score on the server and keeps one entry per
+           player and name; until that SQL has been run, fall back to a plain insert */
+        const r=await c.rpc('submit_score',{p_name:nick,p_score:total});
+        if(r.error&&(r.error.code==='PGRST202'||r.error.code==='42883'||/submit_score/.test(r.error.message||'')&&/find|exist/i.test(r.error.message||''))){
+          const {error}=await c.from(TABLE).insert({user_id:api.uid,player_name:nick,score:total});
+          if(error)throw error;
+        }else if(r.error)throw r.error;
+        else if(typeof r.data==='number')stored=Math.min(total,r.data);
+        m.sent[nick]=stored;ls.set(SENT,JSON.stringify(m));
       }
       api.syncState='saved';
+      /* the server lets a total grow only so fast; send the rest a little later */
+      if(stored<total){clearTimeout(api._later);api._later=setTimeout(sync,60000)}
       busy=false;refresh(nick,true);
     }catch(e){
       explain('score not sent yet.',e);
@@ -110,7 +125,7 @@ const NET=(()=>{
     return loading=(async()=>{
       try{
         const c=await within(client(),10000);
-        const auth=signIn().catch(()=>{}); /* reading is public; signing in only matters for spotting "you" */
+        const auth=knownUser(); /* reading is public; the saved session (if any) only marks "you" */
         let fromView=true,r=await within(c.from(VIEW).select(COLS).order('score',{ascending:false}).order('created_at',{ascending:true}).limit(TOP),8000);
         let rows;
         if(r.error&&!r.error.code)throw r.error; /* no answer from the server: do not try the fallback */
@@ -146,11 +161,26 @@ const NET=(()=>{
     })();
   }
 
+  /* is this name already used on the leaderboard by another player? true / false, or null if it cannot be checked */
+  async function nameTaken(name){
+    name=String(name||'').trim();
+    if(!configured||name.length<2||navigator.onLine===false)return null;
+    try{
+      const c=await within(client(),5000);await knownUser();
+      const like=name.replace(/[\\%_]/g,m=>'\\'+m);   /* match the whole name, any letter case */
+      let q=c.from(VIEW).select('user_id').ilike('player_name',like).limit(5);
+      let r=await within(q,5000);
+      if(r.error&&r.error.code)r=await within(c.from(TABLE).select('user_id').ilike('player_name',like).limit(5),5000);
+      if(r.error)return null;
+      return (r.data||[]).some(x=>x.user_id!==api.uid);
+    }catch(e){return null}
+  }
+
   /* getPending returns {nick,total} for the current player; called at start-up, after each round and when back online */
   function init(getPending){
     pending=getPending||pending;
     if(!configured)return;
-    signIn().then(()=>sync()).catch(e=>explain('anonymous sign-in failed.',e));
+    sync(); /* signs in only if this device has a score waiting to be sent */
     window.addEventListener('online',()=>{sync();if(board.status!=='ok')refresh(undefined,true)});
     window.addEventListener('offline',()=>{if(board.status!=='ok')board.status='offline';emit()});
   }
