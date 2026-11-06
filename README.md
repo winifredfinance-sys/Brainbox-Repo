@@ -36,6 +36,9 @@ npx serve .
 
 ## Deploy to Vercel (free, static)
 
+**Releasing an update.** Before merging a change to anything in `js/` or `css/`, change the `?v=` value on every `<script>` and stylesheet tag in `index.html` and `admin.html` to today's date (for example `?v=20261106`; add a letter for a second release that day). Use the same value everywhere. Browsers then fetch the new files straight away. Even if you forget, `vercel.json` makes browsers check for newer `js/` and `css/` files on every visit (`Cache-Control: public, max-age=0, must-revalidate`), so nobody keeps an old version for long.
+
+
 **Option A – Dashboard (easiest, no tools needed)**
 1. Put this folder in a GitHub repository (upload the files, keep `index.html` at the top level).
 2. Go to vercel.com, sign in, click **Add New → Project**, and import the repository.

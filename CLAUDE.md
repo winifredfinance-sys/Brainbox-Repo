@@ -19,6 +19,7 @@ Free, timed puzzle game for Nigerian players aged 4 to 60+, built to give every 
 - All database text shown in HTML must go through `esc()`.
 
 ## Files
+- Cache busting: every script and stylesheet tag in `index.html` and `admin.html` carries `?v=YYYYMMDD` (currently `?v=20261106`). When a change to `js/` or `css/` is released, set a new value in both files (same value everywhere; add a letter for a second release on the same day, e.g. `20261106b`). `vercel.json` serves `js/` and `css/` with `Cache-Control: public, max-age=0, must-revalidate`, so browsers check for a new file on every load even if the version is not bumped. The vendor file is versioned by its name.
 - `index.html` loads `css/style.css`, then `js/content.js`, `js/bank.js`, `js/config.js`, `js/online.js`, `js/track.js`, `js/app.js` (order matters).
 - `js/content.js`: helpers (`ls`, `esc`, `rnd`…), question lists, generators `G`, `BANDS`, `CATS`, `TL`, `MULT`, `build()`; avoids repeats via `bn-seen-v1`.
 - `js/bank.js`: extra content pushed into the lists above. Also defines Naira Maths (18–59 `money`) from Nov 2026: multi-step generators `nBasket`, `nChange`, `nUnit`, `nVat` (7.5%), `nInterest`, `nSplit`, `nPct`, `nProfitPct`, `nReverse`, `nSuccessive`, `nCompound`, `nInstal`, `nBreakEven`. 60+ Number Puzzles keep the gentle `change`/`discount`.
