@@ -229,3 +229,4 @@ html[data-pal="candy"]{
 .tpts{min-width:4.6em;text-align:right;font-weight:800;color:var(--good);font-variant-numeric:tabular-nums;white-space:nowrap}
 .nw{white-space:nowrap}
 .opts.two .ot{overflow-wrap:normal;word-break:keep-all}
+.badge-s{display:inline-block;vertical-align:middle;margin-left:8px;font:700 .62em var(--body);color:var(--ink-text);background:var(--ink);border-radius:99px;padding:3px 10px;letter-spacing:0}

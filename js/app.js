@@ -20,7 +20,9 @@ const key=(b,c,l,r)=>b+'_'+c+'_'+l+'_'+r;
 const rec=(b,c,l,r)=>LP[key(b,c,l,r)]||{s:0,p:0,t:0};
 const passedRounds=(b,c,l)=>{let n=0;for(let r=0;r<ROUNDS;r++)if(rec(b,c,l,r).s>=1)n++;return n};
 const levelDone=(b,c,l)=>passedRounds(b,c,l)>=ROUNDS;
-const levelOpen=(b,c,l)=>l===0||levelDone(b,c,l-1);
+/* Nov 2026: players choose Beginner, Medium or Hard freely; rounds inside a level still open in order */
+const levelOpen=()=>true;
+const nextRoundOf=(b,c,l)=>{let r=0;while(r<ROUNDS-1&&rec(b,c,l,r).s>=1)r++;return r};
 const roundOpen=(b,c,l,r)=>levelOpen(b,c,l)&&(r===0||rec(b,c,l,r-1).s>=1);
 function totalsOf(lp){const t={total:0,kids:0,teens:0,adults:0,elders:0};for(const k in lp){const p=+lp[k].p||0;t.total+=p;const b=k.split('_')[0];if(b in t)t[b]+=p}return t}
 const totals=()=>totalsOf(LP);
@@ -156,7 +158,7 @@ function howto(){
    <li><strong>Choose a puzzle type</strong><span>Maths, words, proverbs, riddles, memory and more. Start at Beginner and work up to Hard.</span></li>
    <li><strong>Answer before the timer runs out</strong><span>Each round has 10 questions. Tap an answer, or press A to D on a keyboard. A quick right answer earns ${SPEED.max} points, falling to ${SPEED.min} as the clock runs down.</span></li>
   </ol>
-  <section class="panel"><h2 class="sub">Scoring and levels</h2><ul class="rules"><li>Score 6 out of 10 to pass a round and open the next one.</li><li>Every level has 10 rounds. Pass all 10 to unlock the next level.</li><li>Answer fast: a right answer is worth ${SPEED.max} points at once and ${SPEED.min} at the buzzer.</li><li>Medium levels score 1.5× points and Hard levels score double.</li><li>Rounds get harder as you go: Round 10 is tougher than Round 1.</li><li>Hit your daily points target every day to build a streak.</li><li>Your best score in each round counts on the leaderboard.</li></ul></section>
+  <section class="panel"><h2 class="sub">Scoring and levels</h2><ul class="rules"><li>Score 6 out of 10 to pass a round and open the next one.</li><li>Pick any level: Beginner, Medium or Hard. Every level has 10 rounds, and they open one by one.</li><li>Answer fast: a right answer is worth ${SPEED.max} points at once and ${SPEED.min} at the buzzer.</li><li>Medium levels score 1.5× points and Hard levels score double.</li><li>Rounds get harder as you go: Round 10 is tougher than Round 1.</li><li>Hit your daily points target every day to build a streak.</li><li>Your best score in each round counts on the leaderboard.</li></ul></section>
   <button class="btn primary" data-a="start">Start Game</button>`;
 }
 function home(){
@@ -180,18 +182,21 @@ function cats(){
    return `<button class="card" data-a="cat" data-c="${c.id}"><span class="glyph">${c.glyph}</span><span class="nm">${c.name}</span><span class="bl">${c.blurb}</span><span class="pr">${passed} of ${3*ROUNDS} rounds passed</span></button>`}).join('')}</div>
   <button class="btn" data-a="board">View leaderboard</button>`;
 }
+const LEVEL_NOTE=['Easier questions · 1× points','Tougher questions · 1.5× points','Hardest questions · 2× points'];
 function hub(){
   const b=cur(),c=catOf(b.id,S.cat);
   return `<button class="link" data-a="cats">← ${b.name}</button>
   <header class="top"><span class="chip">Ages ${b.range}</span><h1>${c.name}</h1><p class="lead">${c.blurb}</p></header>
-  <ol class="levels">${LEVELS.map((n,i)=>{const open=levelOpen(b.id,S.cat,i),pr=passedRounds(b.id,S.cat,i),st=Array.from({length:ROUNDS},(_,r)=>rec(b.id,S.cat,i,r).s).reduce((x,y)=>x+y,0);
-   const info=open?`${pr} of ${ROUNDS} rounds passed · ${st} of ${ROUNDS*3} stars`:'Pass all '+ROUNDS+' rounds of '+LEVELS[i-1]+' to unlock';
-   return `<li><button class="lvl" data-a="level" data-l="${i}" ${open?'':'disabled'}><span class="ln"><small>Level ${i+1}</small>${n}</span><span class="ls">${open?(levelDone(b.id,S.cat,i)?'Cleared':pr+'/'+ROUNDS):'Locked'}</span><span class="lh">${info}</span></button></li>`}).join('')}</ol>
-  <p class="foot">Each level has ${ROUNDS} rounds of 10 timed questions. Pass a round with 6 out of 10 to open the next one. Hard levels score double.</p>`;
+  <p class="lead">Pick any level. Start with Beginner, or jump straight to Medium or Hard for tougher questions and more points.</p>
+  <ol class="levels">${LEVELS.map((n,i)=>{const pr=passedRounds(b.id,S.cat,i),st=Array.from({length:ROUNDS},(_,r)=>rec(b.id,S.cat,i,r).s).reduce((x,y)=>x+y,0);
+   const played=Array.from({length:ROUNDS},(_,r)=>rec(b.id,S.cat,i,r)).some(x=>x.s||x.t),fresh=i===0&&![0,1,2].some(l=>Array.from({length:ROUNDS},(_,r)=>rec(b.id,S.cat,l,r)).some(x=>x.s||x.t));
+   const info=`${LEVEL_NOTE[i]} · ${TL[b.id][i]}\u00a0s per question`+(played?` · ${pr} of ${ROUNDS} rounds passed · ${st} of ${ROUNDS*3} stars`:'');
+   return `<li><button class="lvl" data-a="level" data-l="${i}"><span class="ln"><small>Level ${i+1}</small>${n}${fresh?' <span class="badge-s">Start here</span>':''}</span><span class="ls">${levelDone(b.id,S.cat,i)?'Cleared ✓':played?pr+'/'+ROUNDS:'New'}</span><span class="lh">${info}</span></button></li>`}).join('')}</ol>
+  <p class="foot">Each level has ${ROUNDS} rounds of 10 timed questions. Pass a round with 6 out of 10 to open the next round in that level.</p>`;
 }
 function rounds(){
   const b=cur(),c=catOf(b.id,S.cat),l=S.level;
-  let next=0;while(next<ROUNDS-1&&rec(b.id,S.cat,l,next).s>=1)next++;
+  const next=nextRoundOf(b.id,S.cat,l);
   const pr=passedRounds(b.id,S.cat,l);
   return `<button class="link" data-a="hub">← ${c.name}</button>
   <header class="top"><span class="chip">${LEVELS[l]} level</span><h1>${pr>=ROUNDS?'Level cleared':'Round '+(next+1)+' is next'}</h1><p class="lead">${pr} of ${ROUNDS} rounds passed. Ten questions per round, ${TL[b.id][l]} seconds each.</p></header>
@@ -248,9 +253,9 @@ function suggestions(){
 const ring=(score,n,pass)=>{const C=2*Math.PI*52;return `<div class="ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="rtrack" cx="60" cy="60" r="52"/><circle class="rfill${pass?'':' fail'}" cx="60" cy="60" r="52" style="--c2:${C.toFixed(1)};--off:${(C*(1-score/n)).toFixed(1)}"/></svg><div class="rtxt"><b>${score}</b><span>out of ${n}</span></div></div>`};
 function result(){
   const r=S.res,tip=TIPS[S.cat]||TIPS.mix,acc=Math.round(100*r.score/r.n);
-  const msg=r.cleared?(S.level===2?'You cleared every level of this puzzle type.':'You passed all '+ROUNDS+' rounds. The next level is open.'):r.pass?'Round '+(r.round+1)+' passed. Round '+(r.round+2)+' is open.':'You need 6 out of 10 to pass. Try again with fresh questions.';
+  const msg=r.cleared?(S.level===2?'You cleared every level of this puzzle type.':'You passed all '+ROUNDS+' rounds of '+LEVELS[S.level]+'. Ready for '+LEVELS[S.level+1]+'?'):r.pass?'Round '+(r.round+1)+' passed. Round '+(r.round+2)+' is open.':'You need 6 out of 10 to pass. Try again with fresh questions.';
   let primary;
-  if(r.cleared&&S.level<2)primary=`<button class="btn primary" data-a="nextlevel">Next level: ${LEVELS[S.level+1]}</button>`;
+  if(r.cleared&&S.level<2)primary=`<button class="btn primary" data-a="nextlevel">Try ${LEVELS[S.level+1]}</button>`;
   else if(r.cleared)primary='<button class="btn primary" data-a="cats">Pick another puzzle type</button>';
   else if(r.pass)primary=`<button class="btn primary" data-a="nextround">Next round (Round ${r.round+2})</button>`;
   else primary='<button class="btn primary" data-a="again">Play Again</button>';
@@ -362,7 +367,7 @@ app.addEventListener('click',e=>{
   else if(a==='round'){S.round=+t.dataset.r;startRound()}
   else if(a==='nextround'){S.round++;startRound()}
   else if(a==='again')startRound();
-  else if(a==='nextlevel'){S.level++;S.round=0;startRound()}
+  else if(a==='nextlevel'){S.level++;S.round=nextRoundOf(S.band,S.cat,S.level);startRound()}
   else if(a==='go')beginRound();
   else if(a==='memodone'){S.memoDone=true;render();startQ()}
   else if(a==='pick')answer(+t.dataset.k);

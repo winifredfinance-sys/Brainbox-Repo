@@ -64,7 +64,7 @@ Two palettes, set as CSS variables at the top of `css/style.css`: Naija Green (a
 - 10 questions per round, 10 rounds per level, 3 levels (Beginner, Medium, Hard) per puzzle type.
 - **Speed scoring (Season 2, Nov 2026).** A correct answer is worth 20 points if you answer at once, falling evenly to 5 points at the buzzer, then × 1 (Beginner), × 1.5 (Medium) or × 2 (Hard), rounded per answer. A round is worth at most 200 / 300 / 400 points. The values are `SPEED` and `MULT` in `js/content.js`.
 - The game shows the points still available next to the timer, "+N pts in Xs" after each answer, and a "Get ready" card before each round with the time per question.
-- Score 6/10 or better to pass a round and open the next. Pass all 10 rounds to unlock the next level.
+- Players choose Beginner, Medium or Hard freely (all open from the start, every age range). Inside a level, score 6/10 or better to pass a round and open the next one. Passing all 10 rounds marks the level cleared.
 - Stars: 1 star at 60%, 2 at 80%, 3 at 90%.
 - **Season 2 reset.** Points earned under the old scoring (10 + up to 5 bonus) are cleared once on each device; stars, unlocks and best times stay. To clear the global board too, run `supabase/season2.sql` once (it keeps a backup in `private.leaderboard_season1`).
 
