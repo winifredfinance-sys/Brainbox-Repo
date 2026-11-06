@@ -191,3 +191,107 @@ cat('kids','skip').L[1].push(['back',2],['back',5],['skip',3],['skip',4]);
 cat('kids','skip').L[2].push(['back',10],['back',5],['skip',4],['skip',6],['skip',7]);
 for(const b of ['teens','adults']){const L=cat(b,'riddles').L;L[0].push(['order',1],['day']);L[1].push(['order',2],['age'],['share'],['day']);L[2].push(['order',3],['age'],['ratio']);}
 {const L=cat('elders','riddles').L;L[0].push(['logic',1,1],['order',1],['day']);L[1].push(['logic',1,2],['order',2],['age'],['share']);L[2].push(['order',3],['age'],['ratio'],['share']);}
+
+/* ---------- Naira Maths (18-59 only): harder, multi-step money questions (Nov 2026) ----------
+   Beginner: market baskets, change from big notes, best buy. Medium: 3-item baskets, 7.5% VAT, simple interest,
+   splitting a bill, percentage change. Hard: profit %, price before a discount, a rise then a fall,
+   compound interest, instalments, break-even. Wrong answers are the usual slips. 60+ Number Puzzles keep
+   the gentle change and discount questions above. */
+const GOODS=[['loaf of bread','loaves of bread',[900,1100,1200,1300,1500]],['kg of rice','kg of rice',[1500,1600,1800,2100]],
+ ['tin of milk','tins of milk',[450,650,750,850]],['bottle of groundnut oil','bottles of groundnut oil',[2400,2800,3200,3500]],
+ ['crate of eggs','crates of eggs',[4200,4800,5500,6000]],['pack of noodles','packs of noodles',[350,450,550]],
+ ['bag of sachet water','bags of sachet water',[300,400,500]],['kg of beans','kg of beans',[1300,1700,1900]],
+ ['tuber of yam','tubers of yam',[2500,3000,3500,4000]],['bar of soap','bars of soap',[400,550,700]]];
+const basket=k=>shuffle(GOODS).slice(0,k).map(([one,many,ps])=>{const n=rnd(2,5),p=pick(ps);return {n,p,txt:`${n} ${many} at ${fmt(p)} each`}});
+const listTxt=a=>a.length<3?a.join(' and '):a.slice(0,-1).join(', ')+' and '+a[a.length-1];
+const nn=(v,list)=>list.filter(x=>x>0&&x!==v);
+G.nBasket=k=>{
+  const b=basket(k),tot=b.reduce((a,x)=>a+x.n*x.p,0),last=b[b.length-1];
+  return mc(`At the market you buy ${listTxt(b.map(x=>x.txt))}. How much do you spend?`,fmt(tot),
+    nn(tot,[tot-last.n*last.p+last.p,tot+b[0].p,tot-b[0].p,tot+100,tot-100,b.reduce((a,x)=>a+x.p,0)*b.reduce((a,x)=>a+x.n,0)]).map(fmt),
+    {why:b.map(x=>`${x.n} × ${fmt(x.p)} = ${fmt(x.n*x.p)}`).join('; ')+`. Total ${fmt(tot)}.`});
+};
+G.nChange=()=>{
+  const b=basket(2),tot=b.reduce((a,x)=>a+x.n*x.p,0),pay=[5000,10000,20000,50000].find(v=>v>tot+300)||50000,c=pay-tot;
+  return mc(`You buy ${listTxt(b.map(x=>x.txt))} and pay with ${fmt(pay)}. What is your change?`,fmt(c),
+    nn(c,[c+b[1].p,c-b[1].p,c+100,c-100,c+1000,pay-b[0].n*b[0].p]).map(fmt),
+    {why:`Total ${fmt(b[0].n*b[0].p)} + ${fmt(b[1].n*b[1].p)} = ${fmt(tot)}. ${fmt(pay)} − ${fmt(tot)} = ${fmt(c)}.`});
+};
+G.nUnit=()=>{
+  const item=pick([['sachets of water','sachet'],['packs of noodles','pack'],['tins of tomato paste','tin'],['bars of soap','bar']]);
+  const u0=pick([60,80,100,120,150,200,250]),units=shuffle([u0,u0+10,u0+20,u0+30]).slice(0,3),qs=shuffle([6,8,10,12,15,20,24]).slice(0,3);
+  const offers=units.map((u,i)=>({q:qs[i],u,t:qs[i]*u})),best=offers.reduce((a,x)=>x.u<a.u?x:a),txt=o=>`${o.q} for ${fmt(o.t)}`;
+  return mc(`Three shops sell ${item[0]}. Which is the best buy (cheapest per ${item[1]})?`,txt(best),offers.filter(o=>o!==best).map(txt).concat(['They all cost the same']),
+    {show:offers.map(txt).join('   ·   '),why:offers.map(o=>`${txt(o)} is ${fmt(o.u)} per ${item[1]}`).join('; ')+'.'});
+};
+G.nVat=()=>{
+  const it=pick(['A blender','A phone','A standing fan','A pressing iron','A school bag','A pair of shoes','A rechargeable lamp']),p=4000*rnd(2,30),v=p*0.075,t=p+v;
+  return mc(`${it} costs ${fmt(p)} before 7.5% VAT. What is the price with VAT?`,fmt(t),nn(t,[p+p*0.75,p*1.05,p+750,p+p*0.0075,p-v,p*1.1]).map(x=>fmt(Math.round(x))),
+    {why:`7.5% of ${fmt(p)} is ${fmt(v)} (10% is ${fmt(p/10)}, take away a quarter of that). ${fmt(p)} + ${fmt(v)} = ${fmt(t)}.`});
+};
+G.nInterest=()=>{
+  const P=10000*rnd(2,20),r=pick([5,8,10,12,15]),y=pick([2,3]),i=P*r*y/100,t=P+i;
+  return mc(`You save ${fmt(P)} at ${r}% simple interest a year. How much do you have after ${y} years?`,fmt(t),
+    nn(t,[i,P+P*r/100,Math.round(P*Math.pow(1+r/100,y)),t+P*r/100,P*r*y]).map(fmt),
+    {why:`Interest each year is ${r}% of ${fmt(P)} = ${fmt(P*r/100)}. Over ${y} years: ${fmt(i)}. Total ${fmt(P)} + ${fmt(i)} = ${fmt(t)}.`});
+};
+G.nSplit=()=>{
+  const n=pick([3,4,5,6]),each=100*rnd(25,90),tip=100*rnd(5,30),bill=each*n-tip;
+  return mc(`${n} friends share a restaurant bill of ${fmt(bill)} and add a ${fmt(tip)} tip. If they split it equally, how much does each pay?`,fmt(each),
+    nn(each,[Math.round(bill/n/10)*10,Math.round((bill+tip)/(n+1)/10)*10,each+100,each-100,each+tip]).map(fmt),
+    {why:`${fmt(bill)} + ${fmt(tip)} = ${fmt(bill+tip)}. ${fmt(bill+tip)} ÷ ${n} = ${fmt(each)}.`});
+};
+G.nPct=()=>{
+  const p=pick([5,10,15,20,25,40,50]),up=Math.random()<.6,old=pick([400,800,1200,1600,2000,2400,4000,6000,8000]),nw=old*(1+(up?p:-p)/100),d=Math.abs(nw-old);
+  const wrongPct=Math.round(1000*d/nw)/10,it=pick(['A bag of garri','A litre of fuel','A crate of eggs','A bus fare','A bag of cement']);
+  return mc(`${it} ${up?'rises':'falls'} from ${fmt(old)} to ${fmt(Math.round(nw))}. What is the percentage ${up?'increase':'decrease'}?`,p+'%',
+    [wrongPct+'%',(p+5)+'%',(p>5?p-5:p+10)+'%',(d/100)+'%',(p*2)+'%',(p+15)+'%'],
+    {why:`The change is ${fmt(d)}. Compare it with the OLD price: ${fmt(d)} ÷ ${fmt(old)} = ${p}%.`});
+};
+G.nProfitPct=()=>{
+  const c=pick([20000,24000,30000,36000,40000,45000,48000,60000,72000,80000]),p=pick([10,12.5,15,20,25,30,40,50]),s=c*(1+p/100);
+  if(s%100)return G.nProfitPct();
+  const onSell=Math.round(1000*(s-c)/s)/10;
+  return mc(`A trader buys ${pick(['a sewing machine','a generator','a bundle of ankara','a crate of drinks','a bag of rice','a used laptop'])} for ${fmt(c)} and sells it for ${fmt(s)}. What is the profit as a percentage of the cost price?`,p+'%',
+    [onSell+'%',(p+5)+'%',((s-c)/1000)+'%',(p*2)+'%'],{why:`Profit ${fmt(s-c)}. ${fmt(s-c)} ÷ ${fmt(c)} = ${p}%. (Dividing by the selling price instead gives ${onSell}%, a common slip.)`});
+};
+G.nReverse=()=>{
+  const p=pick([10,20,25,40,50]),orig=pick([8000,10000,12000,16000,20000,24000,30000,40000]),sale=orig*(1-p/100),it=pick(['a school bag','a wristwatch','a pair of shoes','a blender','a bedsheet set']);
+  return mc(`After a ${p}% discount, ${it} costs ${fmt(sale)}. What was the price before the discount?`,fmt(orig),
+    nn(orig,[sale*(1+p/100),sale+p*100,sale/(1-p/100)+1000,orig-sale+sale*2,Math.round(sale*1.1)]).map(x=>fmt(Math.round(x))),
+    {why:`${fmt(sale)} is ${100-p}% of the old price. ${fmt(sale)} ÷ ${100-p} × 100 = ${fmt(orig)}. (Adding ${p}% to ${fmt(sale)} is the common slip.)`});
+};
+G.nSuccessive=()=>{
+  const p=pick([10,20,25,50]),base=pick([20000,40000,50000,60000,80000,100000]),upFirst=Math.random()<.5,mid=base*(1+(upFirst?p:-p)/100),fin=mid*(1+(upFirst?-p:p)/100);
+  const it=pick(['a phone','a television','a bag of rice','a fridge','a motorcycle part']);
+  return mc(`The price of ${it} is ${fmt(base)}. It ${upFirst?'rises':'falls'} by ${p}%, then the new price ${upFirst?'falls':'rises'} by ${p}%. What is the final price?`,fmt(fin),
+    nn(fin,[base,base*(1-2*p/100),base*(1+p*p/10000),fin-base*p/100,mid]).map(x=>fmt(Math.round(x))),
+    {why:`${fmt(base)} → ${fmt(mid)} → ${fmt(fin)}. The second ${p}% is of a different amount, so it does not cancel out.`});
+};
+G.nCompound=()=>{
+  const P=10000*rnd(2,15),r=pick([10,20]),t=P*Math.pow(1+r/100,2);
+  return mc(`You save ${fmt(P)} at ${r}% interest a year, added to your savings at the end of each year (compound interest). How much do you have after 2 years?`,fmt(Math.round(t)),
+    nn(Math.round(t),[P+2*P*r/100,P*r*2/100,P+P*r/100,Math.round(t)+P*r/100]).map(x=>fmt(Math.round(x))),
+    {why:`Year 1: ${fmt(P)} + ${r}% = ${fmt(P*(1+r/100))}. Year 2: ${fmt(P*(1+r/100))} + ${r}% = ${fmt(Math.round(t))}.`});
+};
+G.nInstal=()=>{
+  const d=pick([20,25,50]),m=d===25?pick([3,6]):pick([3,4,6]),each=1000*rnd(15,60),price=each*m*100/(100-d),dep=price*d/100;
+  return mc(`A television costs ${fmt(price)}. You pay a ${d}% deposit, then the rest in ${m} equal monthly payments. How much is each payment?`,fmt(each),
+    nn(each,[Math.round(price/m),Math.round((price-dep)/(m+1)),dep,each+1000,each-1000]).map(fmt),
+    {why:`Deposit ${d}% of ${fmt(price)} = ${fmt(dep)}. Left to pay ${fmt(price-dep)}. ${fmt(price-dep)} ÷ ${m} = ${fmt(each)}.`});
+};
+G.nBreakEven=()=>{
+  const [what,unit]=pick([['suya','sticks of suya'],['puff-puff','packs of puff-puff'],['zobo','bottles of zobo'],['akara','plates of akara']]);
+  const cost=pick([150,200,250,300,400]),gain=pick([100,150,200,250,300]),n=pick([40,50,60,80,90,100,120]),fixed=n*gain;
+  return mc(`${/^[aeiou]/.test(what)?'An':'A'} ${what} seller pays ${fmt(fixed)} a day for the stand. Each of the ${unit} costs ${fmt(cost)} to make and sells for ${fmt(cost+gain)}. How many must be sold in a day to cover the stand?`,String(n),
+    nn(n,[Math.round(fixed/(cost+gain)),Math.round(fixed/cost),n+10,n-10,n*2]).map(String),
+    {why:`Each sale leaves ${fmt(cost+gain)} − ${fmt(cost)} = ${fmt(gain)}. ${fmt(fixed)} ÷ ${fmt(gain)} = ${n}.`});
+};
+Object.assign(DIFF,{nBasket:k=>1.5+k*.5,nChange:()=>3,nUnit:()=>3.5,nVat:()=>3.5,nInterest:()=>3.5,nSplit:()=>3,nPct:()=>3.5,
+  nProfitPct:()=>4.5,nReverse:()=>4.5,nSuccessive:()=>4,nCompound:()=>4.5,nInstal:()=>4,nBreakEven:()=>4});
+cat('adults','money').blurb='Market totals, VAT, interest, profit and loss.';
+cat('adults','money').L=[
+  [['nBasket',2],['nChange'],['nUnit'],['discount',[10,20,25]]],
+  [['nBasket',3],['nVat'],['nInterest'],['nSplit'],['nPct'],['profit'],['loss'],['discount',[15,30,35]]],
+  [['nProfitPct'],['nReverse'],['nSuccessive'],['nCompound'],['nInstal'],['nBreakEven']]
+];

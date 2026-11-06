@@ -41,6 +41,7 @@ window.fetch=(u,o)=>{
 <script src="js/bank.js"></script>
 <script src="js/online.js"></script>
 <script src="js/track.js"></script>
+<script src="js/sound.js"></script>
 <script src="js/app.js"></script>
 <script>
 (async()=>{
@@ -56,13 +57,18 @@ window.fetch=(u,o)=>{
     document.getElementById('results').textContent=JSON.stringify({mode:MODE,pass:R.length-fail,fail,results:R,warnings:warns},null,1);
     document.title=(fail?'FAIL ':'PASS ')+MODE+' '+(R.length-fail)+'/'+R.length;
   };
+  const played=[];if(typeof FX!=='undefined'){const p0=FX.play;FX.play=n=>{played.push(n);return p0(n)}}
   try{
     ok('privacy line on welcome screen',/anonymous gameplay stats/.test($('#app').textContent));
     if(STOP==='welcome')return done();
     click('[data-a="start"]');
     const inp=$('#nick');inp.value='SmokeTest';inp.dispatchEvent(new Event('input',{bubbles:true}));
     click('[data-a="band"][data-b="adults"]');click('[data-a="cat"][data-c="memory"]');click('[data-a="level"][data-l="0"]');click('[data-a="round"][data-r="0"]');
+    ok('all three levels open from the start',levelOpen('adults','memory',1)&&levelOpen('adults','memory',2)&&!roundOpen('adults','memory',2,1)&&roundOpen('adults','memory',2,0));
     ok('"Get ready" card first',S.screen==='ready'&&/Answer fast for more points/.test($('#app').textContent)&&/25 seconds each|\d+ seconds each/.test($('#app').textContent),$('#app').textContent.slice(0,160));
+    ok('mute button on the "Get ready" card',!!$('[data-a="mute"]'));
+    click('[data-a="mute"]');ok('mute switches sound off and is remembered',FX.sound()===false&&$('[data-a="mute"]').textContent==='🔇'&&(MODE==='blocked'||localStorage.getItem('bn-sound')==='off'));
+    click('[data-a="mute"]');ok('tap again turns sound back on',FX.sound()===true);
     click('[data-a="go"]');
     ok('round started',S.screen==='play'&&S.qs.length===10,S.qs.length);
     for(let i=0;i<10;i++){
@@ -80,6 +86,7 @@ window.fetch=(u,o)=>{
       await wait(30);click('[data-a="next"]');
     }
     ok('result screen',S.screen==='result',S.screen);
+    ok('sounds: right, wrong, timeout, ticks, round passed',['right','wrong','timeout','tick','pass'].every(n=>played.includes(n)),played.join());
     ok('score 7 of 10 (7 right, 2 wrong, 1 timeout)',S.res&&S.res.score===7,S.res&&S.res.score);
     ok('round passed',S.res.pass===true);
     ok('timeout counted for stats',S.to===1,S.to);

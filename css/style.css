@@ -228,3 +228,18 @@ html[data-pal="candy"]{
 .ready .btn{width:100%}
 .tpts{min-width:4.6em;text-align:right;font-weight:800;color:var(--good);font-variant-numeric:tabular-nums;white-space:nowrap}
 .nw{white-space:nowrap}
+.opts.two .ot{overflow-wrap:normal;word-break:keep-all}
+.badge-s{display:inline-block;vertical-align:middle;margin-left:8px;font:700 .62em var(--body);color:var(--ink-text);background:var(--ink);border-radius:99px;padding:3px 10px;letter-spacing:0}
+/* sound and vibration controls */
+.mute{flex:none;min-width:44px;min-height:44px;border:2px solid var(--line);border-radius:12px;background:var(--surface);font-size:1.1em;line-height:1;cursor:pointer}
+.mute:hover{border-color:var(--ink)}
+.fxset{display:flex;flex-wrap:wrap;gap:8px}
+.tog{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:6px 14px 6px 8px;border:2px solid var(--line);border-radius:99px;background:var(--surface);font-weight:600;cursor:pointer}
+.tog b{font-weight:800}
+.tog .tk{width:30px;height:18px;border-radius:9px;background:var(--line);position:relative;flex:none;transition:background .15s}
+.tog .tk::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:left .15s}
+.tog[aria-pressed="true"] .tk{background:var(--good)}
+.tog[aria-pressed="true"] .tk::after{left:14px}
+.topbar .mute{order:2;margin-left:auto}
+.topbar .meta{order:3;flex-basis:100%}
+@media (min-width:560px){.topbar .meta{order:1;flex-basis:auto;margin-left:auto}.topbar .mute{margin-left:0}}

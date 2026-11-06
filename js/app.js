@@ -20,7 +20,9 @@ const key=(b,c,l,r)=>b+'_'+c+'_'+l+'_'+r;
 const rec=(b,c,l,r)=>LP[key(b,c,l,r)]||{s:0,p:0,t:0};
 const passedRounds=(b,c,l)=>{let n=0;for(let r=0;r<ROUNDS;r++)if(rec(b,c,l,r).s>=1)n++;return n};
 const levelDone=(b,c,l)=>passedRounds(b,c,l)>=ROUNDS;
-const levelOpen=(b,c,l)=>l===0||levelDone(b,c,l-1);
+/* Nov 2026: players choose Beginner, Medium or Hard freely; rounds inside a level still open in order */
+const levelOpen=()=>true;
+const nextRoundOf=(b,c,l)=>{let r=0;while(r<ROUNDS-1&&rec(b,c,l,r).s>=1)r++;return r};
 const roundOpen=(b,c,l,r)=>levelOpen(b,c,l)&&(r===0||rec(b,c,l,r-1).s>=1);
 function totalsOf(lp){const t={total:0,kids:0,teens:0,adults:0,elders:0};for(const k in lp){const p=+lp[k].p||0;t.total+=p;const b=k.split('_')[0];if(b in t)t[b]+=p}return t}
 const totals=()=>totalsOf(LP);
@@ -127,6 +129,15 @@ NET.on(()=>{
 });
 /* ---------- anonymous gameplay stats (js/track.js). Wrapped so stats can never stop or slow the game. ---------- */
 const tr=(f,a)=>{try{if(typeof TRACK!=='undefined')TRACK[f](a)}catch(e){}};
+/* ---------- sound and vibration (js/sound.js). Wrapped the same way: never stops the game. ---------- */
+const fx=n=>{try{if(typeof FX!=='undefined')FX.play(n)}catch(e){}};
+const fxOn=k=>{try{return typeof FX!=='undefined'&&FX[k]()}catch(e){return false}};
+const muteBtn=()=>typeof FX==='undefined'||!FX.canSound?'':`<button class="mute" type="button" data-a="mute" aria-pressed="${!fxOn('sound')}" aria-label="${fxOn('sound')?'Sound on. Tap to mute':'Sound off. Tap to turn on'}">${fxOn('sound')?'🔊':'🔇'}</button>`;
+function fxPanel(){
+  if(typeof FX==='undefined'||(!FX.canSound&&!FX.canVibe))return '';
+  const sw=(k,label,on)=>`<button class="tog" type="button" data-a="${k}" aria-pressed="${on}"><span class="tk" aria-hidden="true"></span>${label}: <b>${on?'On':'Off'}</b></button>`;
+  return `<div class="fxset" role="group" aria-label="Sound and vibration">${FX.canSound?sw('snd','Sound',fxOn('sound')):''}${FX.canVibe?sw('vib','Vibration',fxOn('vibe')):''}</div>`;
+}
 
 /* ---------- state ---------- */
 let S={screen:'welcome',from:'home',band:null,cat:null,level:0,round:0,qs:[],i:0,score:0,pts:0,gain:0,totalMs:0,picked:null,memoDone:false,qStart:0,limit:0,rem:0,res:null};
@@ -156,7 +167,7 @@ function howto(){
    <li><strong>Choose a puzzle type</strong><span>Maths, words, proverbs, riddles, memory and more. Start at Beginner and work up to Hard.</span></li>
    <li><strong>Answer before the timer runs out</strong><span>Each round has 10 questions. Tap an answer, or press A to D on a keyboard. A quick right answer earns ${SPEED.max} points, falling to ${SPEED.min} as the clock runs down.</span></li>
   </ol>
-  <section class="panel"><h2 class="sub">Scoring and levels</h2><ul class="rules"><li>Score 6 out of 10 to pass a round and open the next one.</li><li>Every level has 10 rounds. Pass all 10 to unlock the next level.</li><li>Answer fast: a right answer is worth ${SPEED.max} points at once and ${SPEED.min} at the buzzer.</li><li>Medium levels score 1.5× points and Hard levels score double.</li><li>Rounds get harder as you go: Round 10 is tougher than Round 1.</li><li>Hit your daily points target every day to build a streak.</li><li>Your best score in each round counts on the leaderboard.</li></ul></section>
+  <section class="panel"><h2 class="sub">Scoring and levels</h2><ul class="rules"><li>Score 6 out of 10 to pass a round and open the next one.</li><li>Pick any level: Beginner, Medium or Hard. Every level has 10 rounds, and they open one by one.</li><li>Answer fast: a right answer is worth ${SPEED.max} points at once and ${SPEED.min} at the buzzer.</li><li>Medium levels score 1.5× points and Hard levels score double.</li><li>Rounds get harder as you go: Round 10 is tougher than Round 1.</li><li>Hit your daily points target every day to build a streak.</li><li>Your best score in each round counts on the leaderboard.</li></ul></section>
   <button class="btn primary" data-a="start">Start Game</button>`;
 }
 function home(){
@@ -165,7 +176,7 @@ function home(){
   <header class="hero">${MASCOT}<div class="top"><h1>Get ready</h1><p class="lead">Pick a ninja name and your age range. <button class="link inline" data-a="howto">How to play</button></p></div></header>
   <section class="panel"><label for="nick">Your ninja name</label>
    <div class="row"><input id="nick" maxlength="20" autocomplete="off" placeholder="e.g. SwiftMango42" value="${esc(NICK)}"><button class="btn" type="button" data-a="rand">Surprise me</button></div>
-   <p id="msg" class="msg" role="alert"></p></section>
+   <p id="msg" class="msg" role="alert"></p>${fxPanel()}</section>
   <section id="daily" class="panel daily">${dailyCard()}</section>
   <h2 class="sub">Choose your age range</h2>
   <div class="grid ages">${BANDS.map(b=>`<button class="card" data-a="band" data-b="${b.id}" style="--c:var(--${b.id});--cbg:var(--${b.id}-bg)"><span class="rng">${b.range}</span><span class="nm">${b.name}</span><span class="bl">${b.blurb}</span><span class="pr">${t[b.id].toLocaleString('en-NG')} pts</span></button>`).join('')}</div>
@@ -180,18 +191,21 @@ function cats(){
    return `<button class="card" data-a="cat" data-c="${c.id}"><span class="glyph">${c.glyph}</span><span class="nm">${c.name}</span><span class="bl">${c.blurb}</span><span class="pr">${passed} of ${3*ROUNDS} rounds passed</span></button>`}).join('')}</div>
   <button class="btn" data-a="board">View leaderboard</button>`;
 }
+const LEVEL_NOTE=['Easier questions · 1× points','Tougher questions · 1.5× points','Hardest questions · 2× points'];
 function hub(){
   const b=cur(),c=catOf(b.id,S.cat);
   return `<button class="link" data-a="cats">← ${b.name}</button>
   <header class="top"><span class="chip">Ages ${b.range}</span><h1>${c.name}</h1><p class="lead">${c.blurb}</p></header>
-  <ol class="levels">${LEVELS.map((n,i)=>{const open=levelOpen(b.id,S.cat,i),pr=passedRounds(b.id,S.cat,i),st=Array.from({length:ROUNDS},(_,r)=>rec(b.id,S.cat,i,r).s).reduce((x,y)=>x+y,0);
-   const info=open?`${pr} of ${ROUNDS} rounds passed · ${st} of ${ROUNDS*3} stars`:'Pass all '+ROUNDS+' rounds of '+LEVELS[i-1]+' to unlock';
-   return `<li><button class="lvl" data-a="level" data-l="${i}" ${open?'':'disabled'}><span class="ln"><small>Level ${i+1}</small>${n}</span><span class="ls">${open?(levelDone(b.id,S.cat,i)?'Cleared':pr+'/'+ROUNDS):'Locked'}</span><span class="lh">${info}</span></button></li>`}).join('')}</ol>
-  <p class="foot">Each level has ${ROUNDS} rounds of 10 timed questions. Pass a round with 6 out of 10 to open the next one. Hard levels score double.</p>`;
+  <p class="lead">Pick any level. Start with Beginner, or jump straight to Medium or Hard for tougher questions and more points.</p>
+  <ol class="levels">${LEVELS.map((n,i)=>{const pr=passedRounds(b.id,S.cat,i),st=Array.from({length:ROUNDS},(_,r)=>rec(b.id,S.cat,i,r).s).reduce((x,y)=>x+y,0);
+   const played=Array.from({length:ROUNDS},(_,r)=>rec(b.id,S.cat,i,r)).some(x=>x.s||x.t),fresh=i===0&&![0,1,2].some(l=>Array.from({length:ROUNDS},(_,r)=>rec(b.id,S.cat,l,r)).some(x=>x.s||x.t));
+   const info=`${LEVEL_NOTE[i]} · ${TL[b.id][i]}\u00a0s per question`+(played?` · ${pr} of ${ROUNDS} rounds passed · ${st} of ${ROUNDS*3} stars`:'');
+   return `<li><button class="lvl" data-a="level" data-l="${i}"><span class="ln"><small>Level ${i+1}</small>${n}${fresh?' <span class="badge-s">Start here</span>':''}</span><span class="ls">${levelDone(b.id,S.cat,i)?'Cleared ✓':played?pr+'/'+ROUNDS:'New'}</span><span class="lh">${info}</span></button></li>`}).join('')}</ol>
+  <p class="foot">Each level has ${ROUNDS} rounds of 10 timed questions. Pass a round with 6 out of 10 to open the next round in that level.</p>`;
 }
 function rounds(){
   const b=cur(),c=catOf(b.id,S.cat),l=S.level;
-  let next=0;while(next<ROUNDS-1&&rec(b.id,S.cat,l,next).s>=1)next++;
+  const next=nextRoundOf(b.id,S.cat,l);
   const pr=passedRounds(b.id,S.cat,l);
   return `<button class="link" data-a="hub">← ${c.name}</button>
   <header class="top"><span class="chip">${LEVELS[l]} level</span><h1>${pr>=ROUNDS?'Level cleared':'Round '+(next+1)+' is next'}</h1><p class="lead">${pr} of ${ROUNDS} rounds passed. Ten questions per round, ${TL[b.id][l]} seconds each.</p></header>
@@ -202,7 +216,7 @@ function rounds(){
 }
 function ready(){
   const b=cur(),c=catOf(b.id,S.cat),secs=TL[b.id][S.level],top=ptsFor(1,1,S.level),low=ptsFor(0,1,S.level);
-  return `<button class="link" data-a="rounds">← Rounds</button>
+  return `<div class="topbar"><button class="link" data-a="rounds">← Rounds</button>${muteBtn()}</div>
   <section class="qcard ready"><span class="chip">${esc(c.name)} · ${LEVELS[S.level]} · Round ${S.round+1} of ${ROUNDS}</span>
   <h1>Get ready</h1>
   <p class="rfacts"><span><b>${S.qs.length}</b> questions</span><span><b>${secs}</b> seconds each</span></p>
@@ -212,12 +226,12 @@ function ready(){
 }
 function play(){
   const q=S.qs[S.i],N=S.qs.length,done=S.picked!==null;
-  let h=`<div class="topbar"><button class="link" data-a="rounds">← Rounds</button><span class="meta">${LEVELS[S.level]} · Round ${S.round+1} · Time <span id="tclk">${mmss(S.totalMs)}</span></span></div>
+  let h=`<div class="topbar"><button class="link" data-a="rounds">← Rounds</button><span class="meta">${LEVELS[S.level]} · Round ${S.round+1} · Time <span id="tclk">${mmss(S.totalMs)}</span></span>${muteBtn()}</div>
   <div class="prog" role="progressbar" aria-label="Question progress" aria-valuemin="0" aria-valuemax="${N}" aria-valuenow="${S.i+(done?1:0)}">${S.qs.map((_,k)=>`<i class="${k<S.i||(k===S.i&&done)?'done':k===S.i?'now':''}"></i>`).join('')}</div>${S.adj?`<p><span class="chip">${adaptNote(S.adj)}</span></p>`:''}`;
   if(q.memo&&!S.memoDone)return h+`<section class="qcard"><p class="qn">Question ${S.i+1} <span>of ${N}</span></p><p class="q">Remember these items. The clock starts when you are ready.</p><p class="show memo">${esc(q.memo)}</p><button class="btn primary" data-a="memodone">I have remembered them</button></section>`;
   const frac=done?S.rem/S.limit:1;
   h+=`<div class="timer" aria-label="Time left"><span class="tl">Time left</span><div class="tbarwrap"><div id="tbar" class="${frac<.25?'low':frac<.5?'mid':''}" style="transform:scaleX(${frac})"></div></div><span id="tnum">${Math.ceil((done?S.rem:S.limit)/1000)}s</span><span id="tpts" class="tpts" aria-label="Points for a right answer now">${done?'':ptsFor(1,1,S.level)+' pts'}</span></div>`;
-  const short=q.opts.every(o=>o.length<9);
+  const short=q.opts.every(o=>o.length<9);  /* render() falls back to one column if an answer does not fit */
   h+=`<section class="qcard"><p class="qn">Question ${S.i+1} <span>of ${N}</span></p><p class="q">${q.q}</p>${q.show?`<p class="show">${esc(q.show)}</p>`:''}
   <div class="opts${short?' two':''}" role="group" aria-label="Answer choices">${q.opts.map((o,k)=>{let c='opt',m='ABCD'[k];if(done){if(k===q.ans){c+=' good';m='✓'}else if(k===S.picked){c+=' bad';m='✗'}}
    return `<button class="${c}" data-a="pick" data-k="${k}" ${done?'disabled':''}><span class="key">${m}</span><span class="ot">${esc(o)}</span></button>`}).join('')}</div>`;
@@ -234,7 +248,7 @@ const SHOUTS=['You are brilliant!','Great!','Awesome!','Fantastic!','Well done, 
 const PERFECT=['Flawless!','Perfect round!','You are a legend!','Total genius!'];
 const TRY=['Good try!','So close!','Keep going, ninja!','Nearly there!'];
 const CLEARED=['Level cleared!','Champion!','Master of this level!'];
-const TIPS={count:'Touch each fruit once as you count so you do not count it twice.',sums:'Count on from the bigger number. For 7 + 2, start at 7 and count 8, 9.',patterns:'Say the pattern out loud, then say what comes next.',odd:'Name each item. The one that does not fit the group is your answer.',skip:'Say the whole count out loud: 5, 10, 15 and keep the beat going.',maths:'Break big numbers into tens and ones. For 38 + 27, add 30 + 20, then 8 + 7.',seq:'Look at the gaps between the numbers. If the gaps grow, the rule is changing.',words:'Look for familiar endings and beginnings, then try the first letter.',proverbs:'Think about the lesson first. The missing word usually carries it.',riddles:'Read the riddle twice. The answer often hides in plain words.',money:'Round to the nearest ₦100 first, then adjust for the exact amount.',memory:'Group the items into pairs or picture a market stall. Linking them helps you recall.',numbers:'Take it slowly. For change, count up from the price to the amount paid.',mix:'Answer in the first half of the timer to earn the biggest speed bonus.'};
+const TIPS={count:'Touch each fruit once as you count so you do not count it twice.',sums:'Count on from the bigger number. For 7 + 2, start at 7 and count 8, 9.',patterns:'Say the pattern out loud, then say what comes next.',odd:'Name each item. The one that does not fit the group is your answer.',skip:'Say the whole count out loud: 5, 10, 15 and keep the beat going.',maths:'Break big numbers into tens and ones. For 38 + 27, add 30 + 20, then 8 + 7.',seq:'Look at the gaps between the numbers. If the gaps grow, the rule is changing.',words:'Look for familiar endings and beginnings, then try the first letter.',proverbs:'Think about the lesson first. The missing word usually carries it.',riddles:'Read the riddle twice. The answer often hides in plain words.',money:'Work in steps: the total first, then the change. For a percentage, find 10% first and build from it.',memory:'Group the items into pairs or picture a market stall. Linking them helps you recall.',numbers:'Take it slowly. For change, count up from the price to the amount paid.',mix:'Answer in the first half of the timer to earn the biggest speed bonus.'};
 function suggestions(){
   const b=cur(),r=S.res,out=[];
   const passedN=c=>[0,1,2].reduce((a,l)=>a+passedRounds(b.id,c.id,l),0);
@@ -248,9 +262,9 @@ function suggestions(){
 const ring=(score,n,pass)=>{const C=2*Math.PI*52;return `<div class="ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="rtrack" cx="60" cy="60" r="52"/><circle class="rfill${pass?'':' fail'}" cx="60" cy="60" r="52" style="--c2:${C.toFixed(1)};--off:${(C*(1-score/n)).toFixed(1)}"/></svg><div class="rtxt"><b>${score}</b><span>out of ${n}</span></div></div>`};
 function result(){
   const r=S.res,tip=TIPS[S.cat]||TIPS.mix,acc=Math.round(100*r.score/r.n);
-  const msg=r.cleared?(S.level===2?'You cleared every level of this puzzle type.':'You passed all '+ROUNDS+' rounds. The next level is open.'):r.pass?'Round '+(r.round+1)+' passed. Round '+(r.round+2)+' is open.':'You need 6 out of 10 to pass. Try again with fresh questions.';
+  const msg=r.cleared?(S.level===2?'You cleared every level of this puzzle type.':'You passed all '+ROUNDS+' rounds of '+LEVELS[S.level]+'. Ready for '+LEVELS[S.level+1]+'?'):r.pass?'Round '+(r.round+1)+' passed. Round '+(r.round+2)+' is open.':'You need 6 out of 10 to pass. Try again with fresh questions.';
   let primary;
-  if(r.cleared&&S.level<2)primary=`<button class="btn primary" data-a="nextlevel">Next level: ${LEVELS[S.level+1]}</button>`;
+  if(r.cleared&&S.level<2)primary=`<button class="btn primary" data-a="nextlevel">Try ${LEVELS[S.level+1]}</button>`;
   else if(r.cleared)primary='<button class="btn primary" data-a="cats">Pick another puzzle type</button>';
   else if(r.pass)primary=`<button class="btn primary" data-a="nextround">Next round (Round ${r.round+2})</button>`;
   else primary='<button class="btn primary" data-a="again">Play Again</button>';
@@ -281,17 +295,20 @@ function render(){
   app.className='app'+(b&&b.cls?' '+b.cls:'');
   app.setAttribute('style',b?`--c:var(--${b.id});--cbg:var(--${b.id}-bg)`:'');
   app.innerHTML=({welcome,howto,home,cats,hub,rounds,ready,play,result,board:boardView})[S.screen]();
+  /* two answer columns only if every answer fits on one line (long ₦ amounts on narrow phones get one column) */
+  const two=app.querySelector('.opts.two');if(two&&[...two.querySelectorAll('.opt')].some(o=>o.scrollWidth>o.clientWidth+1))two.classList.remove('two');
   const nb=document.getElementById('nextbtn');if(nb)nb.focus();
 }
 function enter(){app.classList.remove('enter');void app.offsetWidth;app.classList.add('enter')}
 function go(s){if(S.screen==='play'&&s!=='play'&&S.live)tr('roundQuit');if(s!=='play')clearInterval(tick);if(s==='board'&&S.screen!=='board')S.from=S.screen;if(s==='howto'&&S.screen!=='howto')S.hfrom=S.screen;S.screen=s;render();if(s==='board'||s==='home')NET.refresh(NICK);enter();window.scrollTo(0,0)}
 
 /* ---------- timed round ---------- */
-function startQ(){S.qStart=Date.now();S.limit=TL[S.band][S.level]*1000;clearInterval(tick);tick=setInterval(onTick,100)}
+function startQ(){S.tickAt=0;S.qStart=Date.now();S.limit=TL[S.band][S.level]*1000;clearInterval(tick);tick=setInterval(onTick,100)}
 function onTick(){
   if(S.screen!=='play'||S.picked!==null){clearInterval(tick);return}
   const used=Date.now()-S.qStart,rem=S.limit-used,bar=document.getElementById('tbar'),num=document.getElementById('tnum'),clk=document.getElementById('tclk');
   if(rem<=0){answer(-1);return}
+  const sec=Math.ceil(rem/1000);if(sec<=5&&sec!==S.tickAt){S.tickAt=sec;fx('tick')}
   if(bar){const f=rem/S.limit;bar.style.transform=`scaleX(${f})`;bar.classList.toggle('low',f<.25);bar.classList.toggle('mid',f>=.25&&f<.5)}
   if(num)num.textContent=Math.ceil(rem/1000)+'s';
   const tp=document.getElementById('tpts');if(tp)tp.textContent=ptsFor(rem,S.limit,S.level)+' pts';
@@ -304,6 +321,7 @@ function answer(k){
   S.totalMs+=used;S.rem=Math.max(0,S.limit-used);S.used=used;S.picked=k;S.gain=0;
   if(k===q.ans){S.score++;S.gain=ptsFor(S.rem,S.limit,S.level);S.pts+=S.gain}  /* S.pts already includes the level multiplier */
   if(k===-1)S.to=(S.to||0)+1; /* timeouts, for stats only */
+  fx(k===q.ans?'right':k===-1?'timeout':'wrong');
   tr('progress',{answered:S.i+1,score:S.score,points:S.pts,ms:S.totalMs,timeouts:S.to||0});
   render();
 }
@@ -330,6 +348,7 @@ function finish(){
   const dailyHit=addDaily(pts,S.band),dy=dailyOf(NICK);
   if(dailyHit)tr('dailyHit',{band:S.band,points:dy.pts,target:dy.target,streak:dy.streak});
   S.res={score:S.score,n,pts,ms:S.totalMs,stars:st,pass,newBest:pts>old.p,round:S.round,cleared:pass&&levelDone(S.band,S.cat,S.level),passed:passedRounds(S.band,S.cat,S.level),nextAdj:adaptAdj(),dailyHit};
+  fx(dailyHit||S.res.cleared?'big':pass?'pass':'fail');
   S.res.shout=dailyHit?'Daily target reached!':S.res.cleared?pick(CLEARED):pass?pick(st===3?PERFECT:SHOUTS):pick(TRY);
   go('result');
 }
@@ -360,8 +379,10 @@ app.addEventListener('click',e=>{
   else if(a==='round'){S.round=+t.dataset.r;startRound()}
   else if(a==='nextround'){S.round++;startRound()}
   else if(a==='again')startRound();
-  else if(a==='nextlevel'){S.level++;S.round=0;startRound()}
+  else if(a==='nextlevel'){S.level++;S.round=nextRoundOf(S.band,S.cat,S.level);startRound()}
   else if(a==='go')beginRound();
+  else if(a==='mute'){try{FX.setSound(!FX.sound())}catch(e){}t.outerHTML=muteBtn()}
+  else if(a==='snd'||a==='vib'){try{a==='snd'?FX.setSound(!FX.sound()):FX.setVibe(!FX.vibe())}catch(e){}const f=t.closest('.fxset');if(f)f.outerHTML=fxPanel()}
   else if(a==='memodone'){S.memoDone=true;render();startQ()}
   else if(a==='pick')answer(+t.dataset.k);
   else if(a==='next'){

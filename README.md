@@ -36,6 +36,9 @@ npx serve .
 
 ## Deploy to Vercel (free, static)
 
+**Releasing an update.** Before merging a change to anything in `js/` or `css/`, change the `?v=` value on every `<script>` and stylesheet tag in `index.html` and `admin.html` to today's date (for example `?v=20261106`; add a letter for a second release that day). Use the same value everywhere. Browsers then fetch the new files straight away. Even if you forget, `vercel.json` makes browsers check for newer `js/` and `css/` files on every visit (`Cache-Control: public, max-age=0, must-revalidate`), so nobody keeps an old version for long.
+
+
 **Option A – Dashboard (easiest, no tools needed)**
 1. Put this folder in a GitHub repository (upload the files, keep `index.html` at the top level).
 2. Go to vercel.com, sign in, click **Add New → Project**, and import the repository.
@@ -61,7 +64,7 @@ Two palettes, set as CSS variables at the top of `css/style.css`: Naija Green (a
 - 10 questions per round, 10 rounds per level, 3 levels (Beginner, Medium, Hard) per puzzle type.
 - **Speed scoring (Season 2, Nov 2026).** A correct answer is worth 20 points if you answer at once, falling evenly to 5 points at the buzzer, then × 1 (Beginner), × 1.5 (Medium) or × 2 (Hard), rounded per answer. A round is worth at most 200 / 300 / 400 points. The values are `SPEED` and `MULT` in `js/content.js`.
 - The game shows the points still available next to the timer, "+N pts in Xs" after each answer, and a "Get ready" card before each round with the time per question.
-- Score 6/10 or better to pass a round and open the next. Pass all 10 rounds to unlock the next level.
+- Players choose Beginner, Medium or Hard freely (all open from the start, every age range). Inside a level, score 6/10 or better to pass a round and open the next one. Passing all 10 rounds marks the level cleared.
 - Stars: 1 star at 60%, 2 at 80%, 3 at 90%.
 - **Season 2 reset.** Points earned under the old scoring (10 + up to 5 bonus) are cleared once on each device; stars, unlocks and best times stay. To clear the global board too, run `supabase/season2.sql` once (it keeps a backup in `private.leaderboard_season1`).
 
@@ -70,6 +73,14 @@ Two palettes, set as CSS variables at the top of `css/style.css`: Naija Green (a
 Rounds 1–3 use the easier half of a level's question types, rounds 4–7 mix all of them, and rounds 8–10 draw 70% from the harder half. On Hard, rounds 8–10 also use slightly bigger numbers (times tables, sums, counting, memory lists, word length, money). Each question type's difficulty score is in `DIFF` in `js/content.js`, and the bigger numbers in `BOOST`. Adaptive difficulty still works on top. Levels with only one question type (for example Odd One Out and Memory) only get the bigger numbers on Hard.
 
 `node tests/ramp-sim.js` simulates players on every age band, puzzle type and level and prints the pass rate per round. It is a model, not player data: about 81% at Round 1 and 73% at Round 10 with the default player.
+
+## Naira Maths (18–59)
+
+Multi-step money questions with everyday Lagos amounts. Beginner: market baskets (2 items with quantities), change from ₦5,000–₦50,000 notes, best buy per unit, simple discounts. Medium: 3-item baskets, 7.5% VAT, simple interest, splitting a bill with a tip, percentage price change, profit and loss. Hard: profit as a % of cost, price before a discount, a rise then a fall, 2-year compound interest, instalments after a deposit, break-even sales. Wrong answers are the common slips (dividing by the selling price, adding the % back on, forgetting the deposit). The generators are at the end of `js/bank.js`; 60+ Number Puzzles keep the gentler change and discount questions.
+
+## Sound and vibration
+
+Short sounds for a right answer, a wrong answer, time running out (a quiet tick in the last 5 seconds), a passed or failed round, and a big celebration for the daily target or a cleared level. They are made in the browser (Web Audio API, `js/sound.js`), so there are no sound files and they work offline. On most Android phones the game also vibrates: one tap for right, two pulses for wrong, a longer pulse when time runs out. iPhones do not let websites vibrate, so they get sound only. Sound and vibration are on by default (vibration starts off if the phone is set to reduce motion). Players switch them on the home screen, or mute with the 🔊 button on the "Get ready" card and during a round. Nothing plays until the player taps something.
 
 ## Daily challenge and streak
 
