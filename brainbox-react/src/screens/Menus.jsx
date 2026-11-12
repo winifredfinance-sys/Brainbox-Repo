@@ -12,7 +12,18 @@ import {Mascot,Stars,FxPanel,Back} from '../components/Common.jsx';
 import {MiniBoard} from './Board.jsx';
 
 export function Welcome({s,a}){
-  const t=P.totals(s.nick);
+  const t=P.totals(s.nick),p=P.PLAYERS.last();
+  if(p){
+    const b=BANDS.find(x=>x.id===p.ageBand),pr=p.progress||{},c=b&&pr.type?typeOf(b.id,pr.type):null;
+    return <section className="welcome"><Mascot/><h1 className="wtitle">Brainbox <em>Ninja</em></h1>
+      <p className="wsub">Welcome back, <strong>{p.nickname}</strong>!</p>
+      <div className="wfeat">{b&&<span>Ages {b.range} · {b.name}</span>}<span>{t.total.toLocaleString('en-NG')} pts</span>{c&&<span>Last played: {c.name} · {LEVELS[+pr.level||0]}</span>}</div>
+      <button className="btn primary big" onClick={a.continuePlayer}>Continue</button>
+      <button className="link" onClick={()=>a.go('players')}>Not you? Switch player</button>
+      <button className="btn" onClick={()=>a.go('howto')}>How to play</button>
+      <button className="link" onClick={()=>a.go('board')}>View the leaderboard</button>
+      <p className="foot">Free to play. No ads. We collect anonymous gameplay stats and ninja names to improve the game, never real names or personal details.</p></section>;
+  }
   return <section className="welcome"><Mascot/><h1 className="wtitle">Brainbox <em>Ninja</em></h1>
     <p className="wsub">{s.nick&&t.total>0?`Welcome back, ${s.nick}. Ready for another round?`:'The timed puzzle game for every age.'}</p>
     <div className="wfeat"><span>Ages 4 to 60+</span><span>Maths, words, proverbs, riddles</span><span>Beat the clock</span></div>
@@ -20,6 +31,19 @@ export function Welcome({s,a}){
     <button className="btn" onClick={()=>a.go('howto')}>How to play</button>
     <button className="link" onClick={()=>a.go('board')}>View the leaderboard</button>
     <p className="foot">Free to play. No ads. We collect anonymous gameplay stats and ninja names to improve the game, never real names or personal details.</p></section>;
+}
+
+/* Who is playing? Everyone who has played on this device, one tap each */
+export function Players({a}){
+  const list=P.PLAYERS.all(),cur=P.PLAYERS.last();
+  return <>
+    <Back onClick={()=>a.go('welcome')}>Back</Back>
+    <header className="top"><h1>Who is playing?</h1><p className="lead">Tap your name. Everyone on this device keeps their own age range and progress.</p></header>
+    <div className="plist">{list.map(p=>{const b=BANDS.find(x=>x.id===p.ageBand),id=b?b.id:'teens',me=cur&&cur.id===p.id;
+      return <button key={p.id} className={'card pcard'+(me?' cur':'')} style={{'--c':`var(--${id})`,'--cbg':`var(--${id}-bg)`}} onClick={()=>a.usePlayer(p.id)}><span className="nm">{p.nickname}{me&&<> <small>(last played)</small></>}</span><span className="bl">{b?`Ages ${b.range} · ${b.name}`:'No age range yet'}</span><span className="pr">{P.totals(p.nickname).total.toLocaleString('en-NG')} pts</span></button>})}</div>
+    <button className="btn" onClick={a.addPlayer}>+ Add new player</button>
+    <p className="foot">Profiles are saved on this device only. No email or personal info needed.</p>
+  </>;
 }
 
 export function HowTo({a}){
@@ -85,6 +109,8 @@ export function Home({s,a}){
     <header className="hero"><Mascot/><div className="top"><h1>Get ready</h1><p className="lead">Pick a ninja name and your age range. <button className="link inline" onClick={()=>a.go('howto')}>How to play</button></p></div></header>
     <section className="panel"><label htmlFor="nick">Your ninja name</label>
       <div className="row"><input id="nick" ref={input} maxLength={NICKNAME_MAX} autoComplete="off" placeholder="e.g. BraveMango4821" value={draft} onChange={e=>typed(e.target.value)}/><button className="btn" type="button" onClick={shuffle}>Shuffle</button></div>
+      <p className="foot pnote">Your nickname and progress are saved on this device only. No email or personal info needed.</p>
+      {P.PLAYERS.all().length>0&&<button className="link" onClick={()=>a.go('players')}>Pick a saved player</button>}
       <p id="msg" className="msg" role="alert">{msg}</p><p id="nmsg" className="foot" role="status">{note}</p>
       <FxPanel onSound={a.toggleSound} onVibe={a.toggleVibe}/></section>
     <section id="daily" className="panel daily"><DailyCard nick={s.nick}/></section>

@@ -38,4 +38,4 @@ export const nameTaken=name=>online?NET.nameTaken(name):Promise.resolve(Object.k
    back online). saveScore(nick, total) is called after each finished round; it signs in anonymously only then. */
 let latest=null;
 export const start=getPending=>NET.init(()=>latest||getPending());
-export function saveScore(nick,total){latest={nick,total};return NET.sync()}
+export function saveScore(nick,total,playerId){latest={nick,total,playerId:playerId||null};return NET.sync()}

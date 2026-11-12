@@ -3,6 +3,8 @@
 import {store,KEYS} from './storage.js';
 import {ROUNDS_PER_LEVEL,ADAPTIVE,NICKNAME_MAX} from '../config/gameConfig.js';
 import {trimSeen} from '../engine/questions.js';
+import {PLAYERS} from './players.js';
+export {PLAYERS};
 
 /* nicknames: letters (any language), digits, space, _ and -; trimmed; at most NICKNAME_MAX characters */
 export const cleanNick=s=>String(s||'').replace(/[^\p{L}\p{N} _-]/gu,'').replace(/\s+/g,' ').trim().slice(0,NICKNAME_MAX);
@@ -15,6 +17,12 @@ if(store.get(KEYS.season)!=='2'){
 }
 export const getNick=()=>cleanNick(store.get(KEYS.nick));
 export const saveNick=n=>store.set(KEYS.nick,n);
+
+/* player profiles on this device (services/players.js): one per nickname played here. The first visit after this
+   update makes a profile for every nickname already in the progress data, and the last player is welcomed back. */
+const bandOf=n=>{let best=null,most=0;for(const b of ['kids','teens','adults','elders']){const c=Object.keys(ALL[n]||{}).filter(k=>k.split('_')[0]===b).length;if(c>most){most=c;best=b}}return best};
+PLAYERS.migrate(Object.keys(ALL),getNick(),bandOf,n=>totalsOf(ALL[n]||{}).total);
+{const lp=PLAYERS.last();if(lp)saveNick(cleanNick(lp.nickname))}
 export const allProfiles=()=>ALL;
 export const profileOf=nick=>(nick&&ALL[nick])||{};
 export const roundKey=(b,c,l,r)=>b+'_'+c+'_'+l+'_'+r;

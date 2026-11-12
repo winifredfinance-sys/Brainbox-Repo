@@ -31,7 +31,9 @@ async function open(b,o={}){
     if(sessionStorage.getItem('x'))return;sessionStorage.setItem('x',1);localStorage.clear();for(const k in st)localStorage.setItem(k,typeof st[k]==='string'?st[k]:JSON.stringify(st[k]))},[o.storage||{'bn-season':'2'},!!o.blocked]);
   await p.goto(o.url||NEW);await p.waitForTimeout(300);return {p,ctx,net,errs};
 }
-const go=async(p,band,type,level,round)=>{await p.getByRole('button',{name:'Start Game'}).first().click();if(!(await p.inputValue('#nick')))await p.fill('#nick','TestNinja');
+/* returning players see "Welcome back" + Continue; Continue opens their age range, whose back link is the home screen */
+const startGame=async p=>{if(await p.getByRole('button',{name:'Start Game'}).count())return p.getByRole('button',{name:'Start Game'}).first().click();await p.getByRole('button',{name:'Continue'}).click();await p.waitForTimeout(200);const back=p.getByRole('button',{name:/Change age range/});if(await back.count())await back.click()};
+const go=async(p,band,type,level,round)=>{await startGame(p);if(!(await p.inputValue('#nick')))await p.fill('#nick','TestNinja');
   await p.locator('.grid.ages .card').nth(['kids','teens','adults','elders'].indexOf(band)).click();await p.locator('.grid.cats .card').nth(type).click();await p.locator('.lvl').nth(level).click();await p.locator('.rnd').nth(round||0).click()};
 (async()=>{const b=await chromium.launch();
   // F1 timer, keyboard, feedback
@@ -77,7 +79,7 @@ const go=async(p,band,type,level,round)=>{await p.getByRole('button',{name:'Star
    ok('-','no page errors (round)',!errs.length,errs);await ctx.close()}
   // F4 daily target + streak, celebration, event
   {const {p,net,ctx}=await open(b,{storage:{'bn-season':'2','bn-nick':'Kemi','bn-daily-v1':{Kemi:{day:lagos(-1),pts:200,hit:true,streak:2,last:lagos(-1),band:'kids'}}}});
-   await p.getByRole('button',{name:'Start Game'}).click();
+   await startGame(p);
    ok('R8','home shows streak and target',/2-day streak/.test(await p.textContent('#daily'))&&/0 \/ 150 points today/.test(await p.textContent('#daily')),await p.textContent('#daily'));
    await p.evaluate(()=>{const d=JSON.parse(localStorage.getItem('bn-daily-v1'));d.Kemi.day=new Date(Date.now()+3600e3).toISOString().slice(0,10);d.Kemi.pts=149;d.Kemi.hit=false;localStorage.setItem('bn-daily-v1',JSON.stringify(d))});
    await p.reload();await go(p,'kids',1,0,0);await p.getByRole('button',{name:'Start round'}).click();
@@ -90,14 +92,14 @@ const go=async(p,band,type,level,round)=>{await p.getByRole('button',{name:'Star
   {const {p,ctx}=await open(b,{storage:{'bn-season':'2','bn-nick':'Ada','bn-skill-v1':{'Ada|teens_maths':[1,1,0.9]}}});await go(p,'teens',0,0,0);
    ok('R7','adaptive: challenge boost after 3 strong rounds',/Challenge boost: 3 harder questions this round/.test(await p.textContent('main')));await ctx.close()}
   // F9 names
-  {const {p,ctx}=await open(b);await p.getByRole('button',{name:'Start Game'}).click();await p.getByRole('button',{name:'Shuffle'}).click();await p.waitForTimeout(400);
+  {const {p,ctx}=await open(b);await startGame(p);await p.getByRole('button',{name:'Shuffle'}).click();await p.waitForTimeout(400);
    const n=await p.inputValue('#nick');ok('S3','Shuffle: Adjective+Noun+3-4 digits',/^[A-Z][a-z]+[A-Z][a-z]+\d{3,4}$/.test(n)&&n.length<=20,n);
    await p.fill('#nick','TakenName');await p.waitForTimeout(1500);ok('S3','typed taken name: gentle note',/Another player already uses this name/.test(await p.textContent('#nmsg')));
    await p.fill('#nick','');await p.locator('.grid.ages .card').first().click();ok('S3','empty name blocked',/Pick a ninja name first/.test(await p.textContent('#msg')));
    await p.getByRole('button',{name:/Sound:/}).click();ok('S12','sound switch saved',(await p.evaluate(()=>localStorage.getItem('bn-sound')))==='off');
    await ctx.close()}
   // F10 levels open, rounds in order
-  {const {p,ctx}=await open(b);await p.getByRole('button',{name:'Start Game'}).click();await p.fill('#nick','Fresh');await p.locator('.grid.ages .card').nth(1).click();await p.locator('.grid.cats .card').nth(0).click();
+  {const {p,ctx}=await open(b);await startGame(p);await p.fill('#nick','Fresh');await p.locator('.grid.ages .card').nth(1).click();await p.locator('.grid.cats .card').nth(0).click();
    ok('R3','all 3 levels open',await p.locator('.lvl:not([disabled])').count()===3);await p.locator('.lvl').nth(2).click();
    ok('R3','Hard: only round 1 open',await p.locator('.rnd:not([disabled])').count()===1);await ctx.close()}
   // F11 local fallback (no Supabase settings)
@@ -120,7 +122,7 @@ const go=async(p,band,type,level,round)=>{await p.getByRole('button',{name:'Star
   // F15 layout: no horizontal scroll, sizes, palette, reduced motion
   for(const w of [320,375]){const {p,ctx}=await open(b,{vp:{width:w,height:740}});const bad=[];
    const check=async name=>{const o=await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);if(o)bad.push(name)};
-   await check('welcome');await p.getByRole('button',{name:'Start Game'}).click();await p.fill('#nick','LayoutTest');await check('home');
+   await check('welcome');await startGame(p);await p.fill('#nick','LayoutTest');await check('home');
    for(const [bi,band] of ['kids','teens','adults','elders'].entries()){await p.locator('.grid.ages .card').nth(bi).click();await check(band+' types');
      if(band==='kids')ok('Look','Candy Brain palette on 4-10 screens',await p.evaluate(()=>document.documentElement.dataset.pal)==='candy');
      const fs=await p.evaluate(()=>getComputedStyle(document.querySelector('main')).fontSize);ok('Look',`text size ${band} at ${w}px`,fs===({kids:'19px',teens:'17px',adults:'17px',elders:'21px'})[band],fs);
@@ -133,7 +135,7 @@ const go=async(p,band,type,level,round)=>{await p.getByRole('button',{name:'Star
   // F16 keyboard only + visible focus
   {const {p,ctx}=await open(b,{storage:{'bn-season':'2','bn-nick':'KeyboardKid'}});
    await p.keyboard.press('Tab');const f=await p.evaluate(()=>{const e=document.activeElement,s=getComputedStyle(e);return e.textContent+'|'+s.outlineStyle+'|'+s.outlineWidth});
-   ok('A11y','Tab reaches Start Game with a visible focus outline',/Start Game\|solid\|3px/.test(f),f);
+   ok('A11y','Tab reaches the main button with a visible focus outline',/(Start Game|Continue)\|solid\|3px/.test(f),f);
    await p.keyboard.press('Enter');for(let i=0;i<20;i++){await p.keyboard.press('Tab');if(await p.evaluate(()=>document.activeElement.classList.contains('card')))break}
    await p.keyboard.press('Enter');for(let i=0;i<5;i++){await p.keyboard.press('Tab');if(await p.evaluate(()=>document.activeElement.classList.contains('card')))break}
    await p.keyboard.press('Enter');for(let i=0;i<5;i++){await p.keyboard.press('Tab');if(await p.evaluate(()=>document.activeElement.classList.contains('lvl')))break}

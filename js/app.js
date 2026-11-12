@@ -26,6 +26,24 @@ const nextRoundOf=(b,c,l)=>{let r=0;while(r<ROUNDS-1&&rec(b,c,l,r).s>=1)r++;retu
 const roundOpen=(b,c,l,r)=>levelOpen(b,c,l)&&(r===0||rec(b,c,l,r-1).s>=1);
 function totalsOf(lp){const t={total:0,kids:0,teens:0,adults:0,elders:0};for(const k in lp){const p=+lp[k].p||0;t.total+=p;const b=k.split('_')[0];if(b in t)t[b]+=p}return t}
 const totals=()=>totalsOf(LP);
+
+/* ---------- player profiles on this device (js/players.js). Identity is kept apart from the round:
+   nothing below ever clears a profile or nickname, and a session timeout only drops the round in progress. ---------- */
+const bandOf=n=>{let best=null,most=0;for(const b of ['kids','teens','adults','elders']){const c=Object.keys(ALL[n]||{}).filter(k=>k.split('_')[0]===b).length;if(c>most){most=c;best=b}}return best};
+PLAYERS.migrate(Object.keys(ALL),NICK,bandOf,n=>totalsOf(ALL[n]||{}).total);
+const me=()=>PLAYERS.byNick(NICK);
+{const lp=PLAYERS.last();if(lp){NICK=cleanNick(lp.nickname);ls.set('bn-nick',NICK);loadLP()}}
+/* remember where this player is, so Continue takes them back there */
+function saveProgress(){const p=me();if(p&&S.band)PLAYERS.update(p.id,{ageBand:S.band,progress:{type:S.cat,level:S.level,round:S.round,totalPoints:totals().total,roundsPassed:S.cat?passedRounds(S.band,S.cat,S.level):0}})}
+function usePlayer(id){const p=PLAYERS.byId(id);if(!p)return null;NICK=cleanNick(p.nickname);ls.set('bn-nick',NICK);PLAYERS.setLast(p.id);loadLP();return p}
+/* Continue: back to the rounds of the level they last played, or their age range, or the name screen */
+function continuePlayer(p){
+  if(!p||!p.ageBand)return go('home');
+  S.band=p.ageBand;
+  const pr=p.progress||{};
+  if(pr.type&&catOf(S.band,pr.type)){S.cat=pr.type;S.level=Math.max(0,Math.min(2,+pr.level||0));return go('rounds')}
+  go('cats');
+}
 const stars=n=>`<span role="img" aria-label="${n} of 3 stars">`+[0,1,2].map(i=>`<span style="--i:${i}" class="${i<n?'on':'off'}">★</span>`).join('')+'</span>';
 
 /* ---------- daily challenge and streak (per nickname, this device, Lagos days). Targets are DAILY in content.js ---------- */
@@ -149,7 +167,18 @@ const MASCOT=`<svg class="mascot" viewBox="0 0 120 120" role="img" aria-label="B
 
 /* ---------- views ---------- */
 function welcome(){
-  const t=totals();
+  const t=totals(),p=PLAYERS.last();
+  if(p){
+    const b=BANDS.find(x=>x.id===p.ageBand),pr=p.progress||{},c=b&&pr.type?catOf(b.id,pr.type):null;
+    return `<section class="welcome">${MASCOT}<h1 class="wtitle">Brainbox <em>Ninja</em></h1>
+  <p class="wsub">Welcome back, <strong>${esc(p.nickname)}</strong>!</p>
+  <div class="wfeat">${b?`<span>Ages ${b.range} · ${esc(b.name)}</span>`:''}<span>${t.total.toLocaleString('en-NG')} pts</span>${c?`<span>Last played: ${esc(c.name)} · ${LEVELS[+pr.level||0]}</span>`:''}</div>
+  <button class="btn primary big" data-a="continue">Continue</button>
+  <button class="link" data-a="players">Not you? Switch player</button>
+  <button class="btn" data-a="howto">How to play</button>
+  <button class="link" data-a="board">View the leaderboard</button>
+  <p class="foot">Free to play. No ads. We collect anonymous gameplay stats and ninja names to improve the game, never real names or personal details.</p></section>`;
+  }
   return `<section class="welcome">${MASCOT}<h1 class="wtitle">Brainbox <em>Ninja</em></h1>
   <p class="wsub">${NICK&&t.total>0?'Welcome back, '+esc(NICK)+'. Ready for another round?':'The timed puzzle game for every age.'}</p>
   <div class="wfeat"><span>Ages 4 to 60+</span><span>Maths, words, proverbs, riddles</span><span>Beat the clock</span></div>
@@ -170,12 +199,24 @@ function howto(){
   <section class="panel"><h2 class="sub">Scoring and levels</h2><ul class="rules"><li>Score 6 out of 10 to pass a round and open the next one.</li><li>Pick any level: Beginner, Medium or Hard. Every level has 10 rounds, and they open one by one.</li><li>Answer fast: a right answer is worth ${SPEED.max} points at once and ${SPEED.min} at the buzzer.</li><li>Medium levels score 1.5× points and Hard levels score double.</li><li>Rounds get harder as you go: Round 10 is tougher than Round 1.</li><li>Hit your daily points target every day to build a streak.</li><li>Your best score in each round counts on the leaderboard.</li></ul></section>
   <button class="btn primary" data-a="start">Start Game</button>`;
 }
+/* Who is playing? Everyone who has played on this device, one tap each */
+function players(){
+  const list=PLAYERS.all(),cur=PLAYERS.last();
+  return `<button class="link" data-a="welcome">← Back</button>
+  <header class="top"><h1>Who is playing?</h1><p class="lead">Tap your name. Everyone on this device keeps their own age range and progress.</p></header>
+  <div class="plist">${list.map(p=>{const b=BANDS.find(x=>x.id===p.ageBand),id=b?b.id:'teens',t=totalsOf(ALL[p.nickname]||{}).total;
+    return `<button class="card pcard${cur&&cur.id===p.id?' cur':''}" data-a="player" data-id="${esc(p.id)}" style="--c:var(--${id});--cbg:var(--${id}-bg)"><span class="nm">${esc(p.nickname)}${cur&&cur.id===p.id?' <small>(last played)</small>':''}</span><span class="bl">${b?esc('Ages '+b.range+' · '+b.name):'No age range yet'}</span><span class="pr">${t.toLocaleString('en-NG')} pts</span></button>`}).join('')}</div>
+  <button class="btn" data-a="addplayer">+ Add new player</button>
+  <p class="foot">Profiles are saved on this device only. No email or personal info needed.</p>`;
+}
 function home(){
   const t=totals();
   return `<button class="link" data-a="welcome">← Title screen</button>
   <header class="hero">${MASCOT}<div class="top"><h1>Get ready</h1><p class="lead">Pick a ninja name and your age range. <button class="link inline" data-a="howto">How to play</button></p></div></header>
   <section class="panel"><label for="nick">Your ninja name</label>
    <div class="row"><input id="nick" maxlength="20" autocomplete="off" placeholder="e.g. BraveMango4821" value="${esc(NICK)}"><button class="btn" type="button" data-a="rand">Shuffle</button></div>
+   <p class="foot pnote">Your nickname and progress are saved on this device only. No email or personal info needed.</p>
+   ${PLAYERS.all().length?'<button class="link" data-a="players">Pick a saved player</button>':''}
    <p id="msg" class="msg" role="alert"></p><p id="nmsg" class="foot" role="status"></p>${fxPanel()}</section>
   <section id="daily" class="panel daily">${dailyCard()}</section>
   <h2 class="sub">Choose your age range</h2>
@@ -291,16 +332,32 @@ function boardView(){
 }
 function render(){
   const b=S.band&&['cats','hub','rounds','ready','play','result'].includes(S.screen)?cur():null;
-  document.documentElement.dataset.pal=(b&&b.id==='kids')?'candy':'naija';
+  const lp=S.screen==='welcome'?PLAYERS.last():null;   /* a 4-10 player is welcomed back in their own colours */
+  document.documentElement.dataset.pal=(b&&b.id==='kids')||(lp&&lp.ageBand==='kids')?'candy':'naija';
   app.className='app'+(b&&b.cls?' '+b.cls:'');
   app.setAttribute('style',b?`--c:var(--${b.id});--cbg:var(--${b.id}-bg)`:'');
-  app.innerHTML=({welcome,howto,home,cats,hub,rounds,ready,play,result,board:boardView})[S.screen]();
+  app.innerHTML=({welcome,howto,home,players,cats,hub,rounds,ready,play,result,board:boardView})[S.screen]();
   /* two answer columns only if every answer fits on one line (long ₦ amounts on narrow phones get one column) */
   const two=app.querySelector('.opts.two');if(two&&[...two.querySelectorAll('.opt')].some(o=>o.scrollWidth>o.clientWidth+1))two.classList.remove('two');
   const nb=document.getElementById('nextbtn');if(nb)nb.focus();
 }
 function enter(){app.classList.remove('enter');void app.offsetWidth;app.classList.add('enter')}
 function go(s){if(S.screen==='play'&&s!=='play'&&S.live)tr('roundQuit');if(s!=='play')clearInterval(tick);if(s==='board'&&S.screen!=='board')S.from=S.screen;if(s==='howto'&&S.screen!=='howto')S.hfrom=S.screen;S.screen=s;render();if(s==='board'||s==='home')NET.refresh(NICK);enter();window.scrollTo(0,0)}
+/* ---------- session timeout: after SESSION_TIMEOUT away (tab hidden, phone locked), only the round in progress is
+   dropped (timer, questions, score). The player profile and nickname are never touched; they come back to
+   "Welcome back" with Continue. ---------- */
+const SESSION_TIMEOUT=30*60*1000;
+let awayAt=0;
+function resetRound(){clearInterval(tick);S.live=false;S.qs=[];S.i=0;S.score=0;S.pts=0;S.gain=0;S.totalMs=0;S.picked=null;S.memoDone=false;S.to=0;S.adj=0;S.qStart=0;S.res=null}
+function sessionTimedOut(){
+  if(['ready','play','result'].includes(S.screen))go('welcome');   /* go() reports an unfinished round to the stats */
+  resetRound();
+}
+function away(){if(!awayAt)awayAt=Date.now()}
+function back(){if(awayAt&&Date.now()-awayAt>SESSION_TIMEOUT)sessionTimedOut();awayAt=0}
+document.addEventListener('visibilitychange',()=>{document.visibilityState==='hidden'?away():back()});
+window.addEventListener('pagehide',away);
+window.addEventListener('pageshow',back);
 
 /* ---------- timed round ---------- */
 function startQ(){S.tickAt=0;S.qStart=Date.now();S.limit=TL[S.band][S.level]*1000;clearInterval(tick);tick=setInterval(onTick,100)}
@@ -334,7 +391,7 @@ function beginRound(){
   if(S.screen!=='ready'||!S.qs.length)return;
   S.live=true; /* set when a round starts; finish() clears it so one round is scored and sent only once */
   S.i=0;S.score=0;S.pts=0;S.totalMs=0;S.picked=null;S.memoDone=false;
-  S.to=0;tr('roundStart',{band:S.band,cat:S.cat,level:S.level,round:S.round,adj:S.adj,total:S.qs.length});
+  S.to=0;saveProgress();tr('roundStart',{band:S.band,cat:S.cat,level:S.level,round:S.round,adj:S.adj,total:S.qs.length});
   go('play');if(!S.qs[0].memo)startQ();
 }
 function finish(){
@@ -342,7 +399,7 @@ function finish(){
   const n=S.qs.length,ratio=S.score/n,pass=S.score>=Math.ceil(n*.6),st=ratio>=.9?3:ratio>=.8?2:ratio>=.6?1:0,pts=S.pts;
   const k=key(S.band,S.cat,S.level,S.round),old=LP[k]||{s:0,p:0,t:0};
   LP[k]={s:Math.max(old.s,st),p:Math.max(old.p,pts),t:pass&&(!old.t||S.totalMs<old.t)?S.totalMs:old.t};
-  saveLP();recordSkill(ratio);
+  saveLP();recordSkill(ratio);saveProgress();
   NET.sync(); /* the round is complete and its points are final: send the new total (only if it went up) */
   tr('roundEnd',{score:S.score,points:pts,ms:S.totalMs,passed:pass,timeouts:S.to||0});
   const dailyHit=addDaily(pts,S.band),dy=dailyOf(NICK);
@@ -382,9 +439,13 @@ app.addEventListener('click',e=>{
   if(a==='rand'){shuffleName();const m=document.getElementById('msg');if(m)m.textContent=''}
   else if(a==='band'){
     if(NICK.length<2){const m=document.getElementById('msg'),i=document.getElementById('nick');if(m)m.textContent='Pick a ninja name first. Use at least 2 letters, or tap Shuffle.';if(i)i.focus();return}
-    S.band=t.dataset.b;loadLP();go('cats');
+    S.band=t.dataset.b;const pl=PLAYERS.forNick(NICK,S.band);PLAYERS.setLast(pl.id);loadLP();go('cats');
   }
   else if(a==='start')go('home');
+  else if(a==='continue')continuePlayer(PLAYERS.last());
+  else if(a==='players')go('players');
+  else if(a==='player'){const p=usePlayer(t.dataset.id);if(p)continuePlayer(p)}
+  else if(a==='addplayer'){NICK='';LP={};ls.set('bn-nick','');S.band=null;go('home');const i=document.getElementById('nick');if(i)i.focus()}
   else if(a==='welcome')go('welcome');
   else if(a==='howto')go('howto');
   else if(a==='hback')go(S.hfrom&&S.hfrom!=='howto'?S.hfrom:'welcome');
@@ -426,5 +487,5 @@ document.addEventListener('keydown',e=>{
 })();
 
 tr('init',()=>NICK);
-NET.init(()=>({nick:NICK,total:totalsOf(ALL[NICK]||{}).total}));  /* the typed nickname's own profile, even before it is loaded */
+NET.init(()=>({nick:NICK,total:totalsOf(ALL[NICK]||{}).total,playerId:(me()||{}).id||null}));  /* the typed nickname's own profile, even before it is loaded */
 render();

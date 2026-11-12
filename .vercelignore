@@ -2,3 +2,5 @@
 tests/
 supabase/
 CLAUDE.md
+# The React version builds separately (Vercel Root Directory = brainbox-react); its source is not part of this site.
+brainbox-react/

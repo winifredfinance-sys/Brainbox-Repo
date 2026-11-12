@@ -13,6 +13,7 @@ Checked on 12 Nov 2026 against the built `dist/` folder.
 | # | Item | Result |
 |---|---|---|
 | S1 | Welcome: mascot, title, "Welcome back, NAME", feature chips, Start Game, How to play, leaderboard link, privacy line | ✅ same text (new and returning player); pixel-identical |
+| S1c | Returning player: "Welcome back, NAME!", Continue, "Not you? Switch player"; Who is playing? (one tap per profile, Add new player); privacy note under the name box; 30-minute timeout drops only the round | ✅ same text as the live game; 19 scenario checks (`tests/players-check.cjs`) |
 | S2 | How to play: 4 steps and scoring rules; Back returns to the previous screen | ✅ same text |
 | S3 | Home: name box (20 max), Shuffle (Adjective+Noun+3–4 digits), taken-name note, empty name blocked, Sound/Vibration switches, Daily card, 4 age bands with points, top-3 preview, footer | ✅ same text; pixel-identical; behaviour checks pass |
 | S4 | Puzzle types for all 4 bands (26 types incl. Mix It Up), "n of 30 rounds passed" | ✅ same text for every band |

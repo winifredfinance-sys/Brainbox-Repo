@@ -251,3 +251,12 @@ html[data-pal="candy"]{
 /* a11y: visually hidden text for screen readers */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 #root{display:contents}
+
+/* player profiles: welcome back and "Who is playing?" */
+.wsub strong{color:var(--fg)}
+.plist{display:flex;flex-direction:column;gap:10px}
+.pcard{width:100%}
+.pcard .nm{font-family:var(--display);font-size:1.15em;overflow-wrap:anywhere}
+.pcard .nm small{font-family:var(--body);font-weight:600;color:var(--muted);font-size:.7em}
+.pcard.cur{border-color:var(--c)}
+.pnote{margin-top:-2px}

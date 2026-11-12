@@ -82,6 +82,17 @@ Multi-step money questions with everyday Lagos amounts. Beginner: market baskets
 
 Short sounds for a right answer, a wrong answer, time running out (a quiet tick in the last 5 seconds), a passed or failed round, and a big celebration for the daily target or a cleared level. They are made in the browser (Web Audio API, `js/sound.js`), so there are no sound files and they work offline. On most Android phones the game also vibrates: one tap for right, two pulses for wrong, a longer pulse when time runs out. iPhones do not let websites vibrate, so they get sound only. Sound and vibration are on by default (vibration starts off if the phone is set to reduce motion). Players switch them on the home screen, or mute with the 🔊 button on the "Get ready" card and during a round. Nothing plays until the player taps something.
 
+## Returning players and shared devices
+
+Each person who plays on a device gets a profile, saved in the browser only (`brainbox_players`, with the last player's id in `brainbox_last`). No email, sign-up or personal info. A profile holds a random id, the nickname, the age band, where they last played and when it was created.
+
+- **Returning players** see "Welcome back, NAME!" with **Continue**, which takes them back to the level they last played, and "Not you? Switch player".
+- **Switch player** lists everyone on the device, with one tap each, plus **Add new player**. A parent and a child each keep their own age band and progress.
+- **Session timeout:** after 30 minutes away, only the round in progress is dropped (timer, questions, score). The nickname and progress are never cleared.
+- **Before this update:** players who already played on the device are moved over automatically on their next visit.
+
+A browser only keeps this data on that device and in that browser. Clearing site data, using a private window, or opening the game in another app's built-in browser (for example from WhatsApp) starts fresh.
+
 ## Daily challenge and streak
 
 Each day (Lagos time) players have a points target for their age range: 4–10: 150, 11–17: 300, 18–59: 300, 60+: 200 (`DAILY` in `js/content.js`). Every finished round's points count, replays included. The target used is the one for the age range played most recently. Progress ("180 / 300 points today") shows on the home and results screens, with a celebration when it is reached. Reaching the target on consecutive days builds a streak; missing a day resets it. Progress and streaks are stored per ninja name on the device (`bn-daily-v1`). Reaching the target sends a `daily_target_hit` stats event, shown in section 9 of the dashboard.

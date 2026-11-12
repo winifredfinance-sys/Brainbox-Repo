@@ -17,20 +17,23 @@ async function open(b,url,{nick,seedProgress,vp}){
   await p.goto(url);await p.waitForTimeout(400);return {p,ctx,errs};
 }
 const text=async p=>norm(await p.locator('main').innerText());
+/* returning players see "Welcome back" + Continue; Continue opens their age range, whose back link is the home screen */
+const toHome=async p=>{if(await p.getByRole('button',{name:'Start Game'}).count()){await p.getByRole('button',{name:'Start Game'}).first().click()}else{await p.getByRole('button',{name:'Continue'}).click();await p.waitForTimeout(250);await p.getByRole('button',{name:/Change age range/}).click()}await p.waitForTimeout(250)};
 const click=async(p,old,sel,txt)=>{if(txt)await p.getByRole('button',{name:txt,exact:false}).first().click();else await p.locator(sel).first().click();await p.waitForTimeout(250)};
 (async()=>{const b=await chromium.launch();const results=[];
   const cmp=(id,name,o,n)=>{const same=o===n;results.push([id,name,same?'PASS':'FAIL',same?'':('\n      old: '+o.slice(0,400)+'\n      new: '+n.slice(0,400))])};
   async function both(id,name,opts,nav){const r={};for(const [k,u] of [['o',OLD],['n',NEW]]){const x=await open(b,u,opts);await nav(x.p,k==='o');await x.p.waitForTimeout(1200);r[k]=await text(x.p);r[k+'e']=x.errs;await x.ctx.close()}cmp(id,name,r.o,r.n);if(r.oe.length||r.ne.length)results.push([id,'page errors','FAIL','old '+r.oe+' new '+r.ne])}
   await both('S1','Welcome, new player',{},async p=>{});
+  await both('S1c','Who is playing? (switch player)',{nick:'Ada',seedProgress:progress},async p=>{await p.getByRole('button',{name:/Switch player/}).click()});
   await both('S1b','Welcome, returning player',{nick:'Ada',seedProgress:progress},async p=>{});
   await both('S2','How to play',{},async p=>{await click(p,0,0,'How to play')});
-  await both('S3','Home (name, daily, bands, top 3)',{nick:'Ada',seedProgress:progress},async p=>{await click(p,0,0,'Start Game')});
-  for(const band of ['kids','teens','adults','elders'])await both('S4','Puzzle types: '+band,{nick:'Ada',seedProgress:progress},async p=>{await click(p,0,0,'Start Game');await p.locator(`.card >> nth=${['kids','teens','adults','elders'].indexOf(band)}`).click();await p.waitForTimeout(250)});
-  await both('S5','Levels (with progress)',{nick:'Ada',seedProgress:progress},async p=>{await click(p,0,0,'Start Game');await p.locator('.card >> nth=1').click();await p.locator('.grid.cats .card >> nth=0').click()});
-  await both('S5b','Levels (new puzzle type: Start here)',{nick:'Ada',seedProgress:progress},async p=>{await click(p,0,0,'Start Game');await p.locator('.card >> nth=1').click();await p.locator('.grid.cats .card >> nth=2').click()});
-  await both('S6','Rounds (stars, points, locks)',{nick:'Ada',seedProgress:progress},async p=>{await click(p,0,0,'Start Game');await p.locator('.card >> nth=1').click();await p.locator('.grid.cats .card >> nth=0').click();await p.locator('.lvl >> nth=0').click()});
-  await both('S7','Get ready card',{nick:'Ada',seedProgress:progress},async p=>{await click(p,0,0,'Start Game');await p.locator('.card >> nth=1').click();await p.locator('.grid.cats .card >> nth=0').click();await p.locator('.lvl >> nth=0').click();await p.locator('.rnd >> nth=2').click()});
+  await both('S3','Home (name, daily, bands, top 3)',{nick:'Ada',seedProgress:progress},async p=>{await toHome(p)});
+  for(const band of ['kids','teens','adults','elders'])await both('S4','Puzzle types: '+band,{nick:'Ada',seedProgress:progress},async p=>{await toHome(p);await p.locator(`.card >> nth=${['kids','teens','adults','elders'].indexOf(band)}`).click();await p.waitForTimeout(250)});
+  await both('S5','Levels (with progress)',{nick:'Ada',seedProgress:progress},async p=>{await toHome(p);await p.locator('.card >> nth=1').click();await p.locator('.grid.cats .card >> nth=0').click()});
+  await both('S5b','Levels (new puzzle type: Start here)',{nick:'Ada',seedProgress:progress},async p=>{await toHome(p);await p.locator('.card >> nth=1').click();await p.locator('.grid.cats .card >> nth=2').click()});
+  await both('S6','Rounds (stars, points, locks)',{nick:'Ada',seedProgress:progress},async p=>{await toHome(p);await p.locator('.card >> nth=1').click();await p.locator('.grid.cats .card >> nth=0').click();await p.locator('.lvl >> nth=0').click()});
+  await both('S7','Get ready card',{nick:'Ada',seedProgress:progress},async p=>{await toHome(p);await p.locator('.card >> nth=1').click();await p.locator('.grid.cats .card >> nth=0').click();await p.locator('.lvl >> nth=0').click();await p.locator('.rnd >> nth=2').click()});
   await both('S10','Leaderboard (online, you not on it)',{nick:'Ada',seedProgress:progress},async p=>{await click(p,0,0,'View the leaderboard')});
-  await both('S3m','Home top-3 preview',{nick:'Ada',seedProgress:progress},async p=>{await click(p,0,0,'Start Game');await p.waitForTimeout(800)});
+  await both('S3m','Home top-3 preview',{nick:'Ada',seedProgress:progress},async p=>{await toHome(p);await p.waitForTimeout(800)});
   for(const r of results)console.log(r[2].padEnd(5),r[0].padEnd(4),r[1],r[3]||'');
   await b.close()})();

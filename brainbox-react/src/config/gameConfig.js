@@ -47,6 +47,10 @@ export const ADAPTIVE={enabled:true,window:3,stepUpAt:0.9,stepDownAt:0.5,swapQue
    that are generated (maths etc.). Fixed lists (proverbs, riddles, logic) always remember every question. */
 export const SEEN_KEEP_GENERATED=400;
 
+/* Session timeout: after this long away (tab hidden, phone locked), the round in progress is dropped and the
+   player is welcomed back. Their nickname and progress are always kept. */
+export const SESSION_TIMEOUT_MS=30*60*1000;
+
 /* Leaderboard */
 export const LEADERBOARD_SIZE=50;          /* players shown on the leaderboard screen */
 export const HOME_PREVIEW_SIZE=3;          /* players shown on the home screen */
