@@ -2,6 +2,12 @@
 
 Free, timed puzzle game for Nigerian players aged 4 to 60+, built to give every age a short daily workout for memory and focus. Portfolio project for a senior product manager. Deployed as a static site on Vercel from GitHub (winifredfinance-sys/Brainbox-Repo, branch `main`).
 
+## React version (Nov 2026, not live yet)
+- `brainbox-react/` is the same game rebuilt with React 19 + Vite 8 (owner's decision). It is NOT live until the Vercel project's Root Directory is set to `brainbox-react` (see brainbox-react/README.md). Until then the vanilla files below are the live game; keep both in step or finish the switch.
+- Rules live in `brainbox-react/src/config/gameConfig.js`, questions in `brainbox-react/src/data/`, logic in `src/engine/` (no React), outside world in `src/services/` (storage, leaderboard adapter, stats, sound), state in `src/game/useGame.js`, UI in `src/screens/`.
+- Same storage keys and Supabase calls as the vanilla game. Build is a single self-contained `dist/index.html` (vite-plugin-singlefile) plus `config.js`, `admin.html`, `vendor/`.
+- Checks: `npm test` (engine), `node tests/generators-parity.mjs ../js` (questions identical to the vanilla game), `tests/browser-check.cjs` and `tests/parity-old-vs-new.cjs` (Playwright). Parity checklist: `brainbox-react/docs/PARITY.md`.
+
 ## Stack and rules
 - Plain HTML, CSS and JavaScript. No framework, no build step, no npm dependencies. Third-party code is vendored with an exact version (`js/vendor/supabase-2.118.0.js`).
 - Free services only. Supabase (free tier) holds the global leaderboard and the anonymous gameplay stats. Everything else (progress, unlocks, stars, seen questions) is in `localStorage`.
@@ -19,14 +25,17 @@ Free, timed puzzle game for Nigerian players aged 4 to 60+, built to give every 
 - All database text shown in HTML must go through `esc()`.
 
 ## Files
-- Cache busting: every script and stylesheet tag in `index.html` and `admin.html` carries `?v=YYYYMMDD` (currently `?v=20261106d`). When a change to `js/` or `css/` is released, set a new value in both files (same value everywhere; add a letter for a second release on the same day, e.g. `20261106b`). `vercel.json` serves `js/` and `css/` with `Cache-Control: public, max-age=0, must-revalidate`, so browsers check for a new file on every load even if the version is not bumped. The vendor file is versioned by its name.
-- `index.html` loads `css/style.css`, then `js/content.js`, `js/bank.js`, `js/config.js`, `js/online.js`, `js/track.js`, `js/sound.js`, `js/app.js` (order matters).
+- Cache busting: every script and stylesheet tag in `index.html` and `admin.html` carries `?v=YYYYMMDD` (currently `?v=20261112a`). When a change to `js/` or `css/` is released, set a new value in both files (same value everywhere; add a letter for a second release on the same day, e.g. `20261106b`). `vercel.json` serves `js/` and `css/` with `Cache-Control: public, max-age=0, must-revalidate`, so browsers check for a new file on every load even if the version is not bumped. The vendor file is versioned by its name.
+- `index.html` loads `css/style.css`, then `js/content.js`, `js/bank.js`, `js/config.js`, `js/online.js`, `js/track.js`, `js/sound.js`, `js/players.js`, `js/app.js` (order matters).
 - `js/content.js`: helpers (`ls`, `esc`, `rnd`…), question lists, generators `G`, `BANDS`, `CATS`, `TL`, `MULT`, `build()`; avoids repeats via `bn-seen-v1`.
 - `js/bank.js`: extra content pushed into the lists above. Also defines Naira Maths (18–59 `money`) from Nov 2026: multi-step generators `nBasket`, `nChange`, `nUnit`, `nVat` (7.5%), `nInterest`, `nSplit`, `nPct`, `nProfitPct`, `nReverse`, `nSuccessive`, `nCompound`, `nInstal`, `nBreakEven`. 60+ Number Puzzles keep the gentle `change`/`discount`.
 - `js/config.js`: Supabase project URL and publishable key (`window.BN_SUPABASE`).
 - `js/online.js`: `NET`, the global leaderboard. Signs in anonymously ONLY when there is a score to send (Supabase limits new anonymous sign-ins per IP, and many Nigerian players share one IP); reading uses the saved session if any. Scores go through `rpc('submit_score')` (falls back to a plain insert if the function is missing). `NET.nameTaken(name)` checks the board for a name used by another account. Top 50.
 - Ninja names (app.js): `ADJ` (87) + `NOUN` (94) kid-safe words + 3–4 digits, e.g. BraveMango4821, max 20 chars, about 81 million combinations. Shuffle (`shuffleName()`) avoids names already used on this device, on the loaded board and online. Players can type their own (`cleanNick`: letters, digits, space, _ and -, 2–20 characters); a taken typed name gets a gentle note, not a block.
 - `js/track.js`: `TRACK`, the anonymous gameplay stats. Plain `fetch` to `/rest/v1/events`, batched, capped queue `bn-q-v1` (200), round-in-progress marker `bn-live-v1`, retries with backoff.
+- `js/players.js`: `PLAYERS`, player profiles on this device (Nov 2026). `brainbox_players` = [{id (crypto.randomUUID), nickname, ageBand, progress:{type, level, round, totalPoints, roundsPassed}, createdAt, lastPlayedAt}], `brainbox_last` = last player's id. A profile is created/updated when a nickname picks an age band, updated after each round (`saveProgress()` in app.js). Returning players get "Welcome back, NAME!" + Continue (back to their last level) + "Not you? Switch player" (`players` screen: one tap per profile, "Add new player"). First load after the update makes a profile for every nickname in `bn-profiles-v2`. Stars/points stay in `bn-profiles-v2` keyed by nickname. Never clear a profile or nickname in code.
+- Session timeout (app.js): after `SESSION_TIMEOUT` (30 min) with the tab hidden, only the round state is reset (`resetRound()`); the player goes to Welcome back. Identity is never touched.
+- Leaderboard player id: the pending total carries `playerId`; it is sent (`p_player` / `player_id`) only when `window.BN_SUPABASE.sendPlayerId` is true, after the database gets that column. Off by default.
 - `js/sound.js`: `FX`, sound effects made with the Web Audio API (no audio files) and vibration (`navigator.vibrate`, Android only). Sounds: right, wrong, timeout, tick (last 5 s), pass, fail, big (daily target / level cleared). Both on by default; vibration starts off if the device asks for reduced motion. Saved as `bn-sound` / `bn-vibe`. Called from app.js only through the wrapped `fx()`. Switches on the home screen, 🔊 mute button on the Get ready card and during play.
 - `js/app.js`: screens, state `S`, scoring, unlocks, adaptive difficulty, leaderboard view. Tracking hooks: `startRound` (roundStart), `answer` (progress, timeout count `S.to`), `finish` (roundEnd), `go` (roundQuit when leaving a live round).
 - `admin.html`, `js/admin.js`, `css/admin.css`: admin dashboard (noindex, not linked). Email + password sign-in (`signInWithPassword`) or email link (`signInWithOtp`, `shouldCreateUser:false`), one RPC `admin_stats(p_from, p_to, p_band)`, plain-SVG charts.
@@ -42,7 +51,7 @@ Free, timed puzzle game for Nigerian players aged 4 to 60+, built to give every 
 - Daily challenge: points target per age band per Lagos day (`DAILY` in content.js: kids 150, teens/adults 300, elders 200); target of the most recently played band; streak of consecutive days hit, per nickname, in `bn-daily-v1`. Sends `daily_target_hit` once per day.
 - Season 2: on first load the game clears old-scoring round points once (`bn-season` = '2'; keeps stars, unlocks, times) and `bn-sent-v1`. `supabase/season2.sql` backs up and empties the global board.
 - Adaptive difficulty: last 3 rounds per player and puzzle type averaging ≥90% swaps 3 questions for the next level up; ≤50% swaps 3 for the level below.
-- Progress is per nickname on the device (`bn-profiles-v2`). Leaderboard score = total of best points per round.
+- Progress is per nickname on the device (`bn-profiles-v2`), with a profile per player in `brainbox_players`. Leaderboard score = total of best points per round.
 
 ## Product success metrics (shown on the dashboard)
 3+ rounds in the first session · day-7 return of 20% · Beginner pass rate 60–75% · timeouts under 10% · no age group below 10%.

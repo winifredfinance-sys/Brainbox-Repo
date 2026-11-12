@@ -73,7 +73,10 @@ const NET=(()=>{
   let pending=()=>null,busy=false,again=false;
   async function sync(){
     if(!configured){api.syncState='';return}
-    const p=pending(),nick=p&&p.nick,total=Math.max(0,Math.floor(+(p&&p.total)||0));
+    const p=pending(),nick=p&&p.nick,total=Math.max(0,Math.floor(+(p&&p.total)||0)),playerId=p&&p.playerId||null;
+    /* the device player id (js/players.js) goes with every entry; it is only sent once the database has a column
+       for it (set sendPlayerId:true in js/config.js after adding it), so today's database keeps working */
+    const withId=CFG.sendPlayerId&&playerId;
     if(!nick||nick.length<2||total<=0||total<=(+readSent().sent[nick]||0)){if(!busy)api.syncState='';emit();return}
     if(busy){again=true;return}
     if(!navigator.onLine){api.syncState='offline';emit();return}
@@ -85,9 +88,9 @@ const NET=(()=>{
       if(total>(+m.sent[nick]||0)){
         /* submit_score (supabase/hardening.sql) checks the name and score on the server and keeps one entry per
            player and name; until that SQL has been run, fall back to a plain insert */
-        const r=await c.rpc('submit_score',{p_name:nick,p_score:total});
+        const r=await c.rpc('submit_score',withId?{p_name:nick,p_score:total,p_player:playerId}:{p_name:nick,p_score:total});
         if(r.error&&(r.error.code==='PGRST202'||r.error.code==='42883'||/submit_score/.test(r.error.message||'')&&/find|exist/i.test(r.error.message||''))){
-          const {error}=await c.from(TABLE).insert({user_id:api.uid,player_name:nick,score:total});
+          const {error}=await c.from(TABLE).insert(withId?{user_id:api.uid,player_name:nick,score:total,player_id:playerId}:{user_id:api.uid,player_name:nick,score:total});
           if(error)throw error;
         }else if(r.error)throw r.error;
         else if(typeof r.data==='number')stored=Math.min(total,r.data);

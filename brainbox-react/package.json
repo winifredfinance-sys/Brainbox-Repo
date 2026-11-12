@@ -1,0 +1,22 @@
+{
+  "name": "brainbox-ninja",
+  "private": true,
+  "version": "3.0.0",
+  "type": "module",
+  "description": "Brainbox Ninja: a free timed puzzle game for Nigerian players of every age.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && vite build --config vite.admin.config.js",
+    "preview": "vite preview",
+    "test": "node tests/engine.test.mjs"
+  },
+  "dependencies": {
+    "react": "19.2.9",
+    "react-dom": "19.2.9"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "6.1.2",
+    "vite": "8.3.5",
+    "vite-plugin-singlefile": "2.3.4"
+  }
+}

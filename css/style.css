@@ -243,3 +243,12 @@ html[data-pal="candy"]{
 .topbar .mute{order:2;margin-left:auto}
 .topbar .meta{order:3;flex-basis:100%}
 @media (min-width:560px){.topbar .meta{order:1;flex-basis:auto;margin-left:auto}.topbar .mute{margin-left:0}}
+
+/* player profiles: welcome back and "Who is playing?" */
+.wsub strong{color:var(--fg)}
+.plist{display:flex;flex-direction:column;gap:10px}
+.pcard{width:100%}
+.pcard .nm{font-family:var(--display);font-size:1.15em;overflow-wrap:anywhere}
+.pcard .nm small{font-family:var(--body);font-weight:600;color:var(--muted);font-size:.7em}
+.pcard.cur{border-color:var(--c)}
+.pnote{margin-top:-2px}
