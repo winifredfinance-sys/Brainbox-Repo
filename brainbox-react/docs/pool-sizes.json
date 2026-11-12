@@ -1,0 +1,626 @@
+[
+ {
+  "band": "kids",
+  "type": "count",
+  "level": "Beginner",
+  "pool": 295,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "kids",
+  "type": "count",
+  "level": "Medium",
+  "pool": 984,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "kids",
+  "type": "count",
+  "level": "Hard",
+  "pool": 3880,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "kids",
+  "type": "sums",
+  "level": "Beginner",
+  "pool": 230,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "kids",
+  "type": "sums",
+  "level": "Medium",
+  "pool": 959,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "kids",
+  "type": "sums",
+  "level": "Hard",
+  "pool": 336,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "kids",
+  "type": "patterns",
+  "level": "Beginner",
+  "pool": 506,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "kids",
+  "type": "patterns",
+  "level": "Medium",
+  "pool": 1510,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "kids",
+  "type": "patterns",
+  "level": "Hard",
+  "pool": 3288,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "kids",
+  "type": "odd",
+  "level": "Beginner",
+  "pool": 6387,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "kids",
+  "type": "odd",
+  "level": "Medium",
+  "pool": 6987,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "kids",
+  "type": "odd",
+  "level": "Hard",
+  "pool": 7261,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "kids",
+  "type": "skip",
+  "level": "Beginner",
+  "pool": 126,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "kids",
+  "type": "skip",
+  "level": "Medium",
+  "pool": 140,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "kids",
+  "type": "skip",
+  "level": "Hard",
+  "pool": 173,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "kids",
+  "type": "mix",
+  "level": "Beginner",
+  "pool": 1798,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "kids",
+  "type": "mix",
+  "level": "Medium",
+  "pool": 2623,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "kids",
+  "type": "mix",
+  "level": "Hard",
+  "pool": 2674,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "teens",
+  "type": "maths",
+  "level": "Beginner",
+  "pool": 1775,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "teens",
+  "type": "maths",
+  "level": "Medium",
+  "pool": 3472,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "teens",
+  "type": "maths",
+  "level": "Hard",
+  "pool": 2545,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "teens",
+  "type": "seq",
+  "level": "Beginner",
+  "pool": 240,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "teens",
+  "type": "seq",
+  "level": "Medium",
+  "pool": 420,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "teens",
+  "type": "seq",
+  "level": "Hard",
+  "pool": 103,
+  "generated": true,
+  "repeats": 5
+ },
+ {
+  "band": "teens",
+  "type": "words",
+  "level": "Beginner",
+  "pool": 2646,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "teens",
+  "type": "words",
+  "level": "Medium",
+  "pool": 3795,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "teens",
+  "type": "words",
+  "level": "Hard",
+  "pool": 4006,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "teens",
+  "type": "proverbs",
+  "level": "Beginner",
+  "pool": 82,
+  "generated": false,
+  "repeats": 18
+ },
+ {
+  "band": "teens",
+  "type": "proverbs",
+  "level": "Medium",
+  "pool": 108,
+  "generated": false,
+  "repeats": 0
+ },
+ {
+  "band": "teens",
+  "type": "proverbs",
+  "level": "Hard",
+  "pool": 108,
+  "generated": false,
+  "repeats": 0
+ },
+ {
+  "band": "teens",
+  "type": "riddles",
+  "level": "Beginner",
+  "pool": 4252,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "teens",
+  "type": "riddles",
+  "level": "Medium",
+  "pool": 5385,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "teens",
+  "type": "riddles",
+  "level": "Hard",
+  "pool": 7981,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "teens",
+  "type": "mix",
+  "level": "Beginner",
+  "pool": 3950,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "teens",
+  "type": "mix",
+  "level": "Medium",
+  "pool": 5311,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "teens",
+  "type": "mix",
+  "level": "Hard",
+  "pool": 4888,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "money",
+  "level": "Beginner",
+  "pool": 6064,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "money",
+  "level": "Medium",
+  "pool": 4232,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "money",
+  "level": "Hard",
+  "pool": 1818,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "maths",
+  "level": "Beginner",
+  "pool": 3929,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "maths",
+  "level": "Medium",
+  "pool": 2662,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "maths",
+  "level": "Hard",
+  "pool": 2747,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "seq",
+  "level": "Beginner",
+  "pool": 300,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "seq",
+  "level": "Medium",
+  "pool": 308,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "seq",
+  "level": "Hard",
+  "pool": 103,
+  "generated": true,
+  "repeats": 5
+ },
+ {
+  "band": "adults",
+  "type": "words",
+  "level": "Beginner",
+  "pool": 2688,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "words",
+  "level": "Medium",
+  "pool": 3658,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "words",
+  "level": "Hard",
+  "pool": 3939,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "proverbs",
+  "level": "Beginner",
+  "pool": 82,
+  "generated": false,
+  "repeats": 18
+ },
+ {
+  "band": "adults",
+  "type": "proverbs",
+  "level": "Medium",
+  "pool": 108,
+  "generated": false,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "proverbs",
+  "level": "Hard",
+  "pool": 108,
+  "generated": false,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "riddles",
+  "level": "Beginner",
+  "pool": 4280,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "riddles",
+  "level": "Medium",
+  "pool": 5275,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "riddles",
+  "level": "Hard",
+  "pool": 7976,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "memory",
+  "level": "Beginner",
+  "pool": 7983,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "memory",
+  "level": "Medium",
+  "pool": 8000,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "memory",
+  "level": "Hard",
+  "pool": 8000,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "mix",
+  "level": "Beginner",
+  "pool": 5588,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "mix",
+  "level": "Medium",
+  "pool": 5790,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "adults",
+  "type": "mix",
+  "level": "Hard",
+  "pool": 5196,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "elders",
+  "type": "memory",
+  "level": "Beginner",
+  "pool": 7385,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "elders",
+  "type": "memory",
+  "level": "Medium",
+  "pool": 7985,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "elders",
+  "type": "memory",
+  "level": "Hard",
+  "pool": 8000,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "elders",
+  "type": "proverbs",
+  "level": "Beginner",
+  "pool": 82,
+  "generated": false,
+  "repeats": 18
+ },
+ {
+  "band": "elders",
+  "type": "proverbs",
+  "level": "Medium",
+  "pool": 108,
+  "generated": false,
+  "repeats": 0
+ },
+ {
+  "band": "elders",
+  "type": "proverbs",
+  "level": "Hard",
+  "pool": 108,
+  "generated": false,
+  "repeats": 0
+ },
+ {
+  "band": "elders",
+  "type": "riddles",
+  "level": "Beginner",
+  "pool": 4245,
+  "generated": true,
+  "repeats": 16
+ },
+ {
+  "band": "elders",
+  "type": "riddles",
+  "level": "Medium",
+  "pool": 6465,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "elders",
+  "type": "riddles",
+  "level": "Hard",
+  "pool": 7010,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "elders",
+  "type": "words",
+  "level": "Beginner",
+  "pool": 1851,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "elders",
+  "type": "words",
+  "level": "Medium",
+  "pool": 3298,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "elders",
+  "type": "words",
+  "level": "Hard",
+  "pool": 3945,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "elders",
+  "type": "numbers",
+  "level": "Beginner",
+  "pool": 1136,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "elders",
+  "type": "numbers",
+  "level": "Medium",
+  "pool": 1799,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "elders",
+  "type": "numbers",
+  "level": "Hard",
+  "pool": 564,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "elders",
+  "type": "mix",
+  "level": "Beginner",
+  "pool": 4206,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "elders",
+  "type": "mix",
+  "level": "Medium",
+  "pool": 5302,
+  "generated": true,
+  "repeats": 0
+ },
+ {
+  "band": "elders",
+  "type": "mix",
+  "level": "Hard",
+  "pool": 5204,
+  "generated": true,
+  "repeats": 0
+ }
+]

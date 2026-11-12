@@ -2,6 +2,12 @@
 
 Free, timed puzzle game for Nigerian players aged 4 to 60+, built to give every age a short daily workout for memory and focus. Portfolio project for a senior product manager. Deployed as a static site on Vercel from GitHub (winifredfinance-sys/Brainbox-Repo, branch `main`).
 
+## React version (Nov 2026, not live yet)
+- `brainbox-react/` is the same game rebuilt with React 19 + Vite 8 (owner's decision). It is NOT live until the Vercel project's Root Directory is set to `brainbox-react` (see brainbox-react/README.md). Until then the vanilla files below are the live game; keep both in step or finish the switch.
+- Rules live in `brainbox-react/src/config/gameConfig.js`, questions in `brainbox-react/src/data/`, logic in `src/engine/` (no React), outside world in `src/services/` (storage, leaderboard adapter, stats, sound), state in `src/game/useGame.js`, UI in `src/screens/`.
+- Same storage keys and Supabase calls as the vanilla game. Build is a single self-contained `dist/index.html` (vite-plugin-singlefile) plus `config.js`, `admin.html`, `vendor/`.
+- Checks: `npm test` (engine), `node tests/generators-parity.mjs ../js` (questions identical to the vanilla game), `tests/browser-check.cjs` and `tests/parity-old-vs-new.cjs` (Playwright). Parity checklist: `brainbox-react/docs/PARITY.md`.
+
 ## Stack and rules
 - Plain HTML, CSS and JavaScript. No framework, no build step, no npm dependencies. Third-party code is vendored with an exact version (`js/vendor/supabase-2.118.0.js`).
 - Free services only. Supabase (free tier) holds the global leaderboard and the anonymous gameplay stats. Everything else (progress, unlocks, stars, seen questions) is in `localStorage`.

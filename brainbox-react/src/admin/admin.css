@@ -1,0 +1,120 @@
+/* Brainbox Ninja admin dashboard. Builds on css/style.css (Naija Green tokens on :root). Light only, like the game. */
+:root{--warn-bg:#FFF1CC;--warn:#7A4A00;--mid-bg:#F3EFE0}
+.adm{position:relative;max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:18px;font-size:16px;line-height:1.45}
+.adm h1{font-size:1.8em}
+.adm h2{font-family:var(--display);font-size:1.15em;font-weight:800;display:flex;align-items:center;gap:10px}
+.adm h3{font-size:.85em;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:4px 0 6px}
+.adm code{font-size:.9em;background:var(--mid-bg);border-radius:6px;padding:1px 5px;overflow-wrap:anywhere}
+.adm pre{margin:0;white-space:pre-wrap;background:var(--mid-bg);border-radius:10px;padding:10px 12px}
+.adm pre code{background:none;padding:0}
+.muted{color:var(--muted)}
+.eyebrow{font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;font-size:.8em}
+.adm-top{display:flex;justify-content:space-between;align-items:flex-end;gap:8px 16px;flex-wrap:wrap}
+.who{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:.9em;overflow-wrap:anywhere}
+.filters{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;position:sticky;top:0;z-index:2;background:var(--bg);padding:8px 0}
+.scope{color:var(--muted);font-size:.9em}
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow);min-width:0}
+.sh{display:flex;flex-direction:column;gap:4px}
+.sn{display:inline-grid;place-items:center;flex:none;width:1.7em;height:1.7em;border-radius:50%;background:var(--ink);color:var(--ink-text);font-size:.8em}
+.metric{color:var(--muted);font-size:.92em}
+.target{font-size:.92em}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+@media (min-width:900px){.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.empty{color:var(--muted);background:var(--bg);border:1px dashed var(--line);border-radius:12px;padding:14px}
+.banner{background:var(--warn-bg);border:1px solid var(--gold);border-radius:12px;padding:10px 14px}
+.note-s,.legend{color:var(--muted);font-size:.85em}
+.legend{display:flex;flex-wrap:wrap;gap:6px}
+.meta{text-align:center}
+.bad-t{color:var(--bad);font-weight:700}
+.row-b{display:flex;flex-wrap:wrap;gap:10px}
+
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tiles.t2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.tile{border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;align-items:flex-start;min-width:0}
+.tile .tl{font-size:.8em;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.tile b{font-family:var(--display);font-size:1.7em;line-height:1.15;font-variant-numeric:tabular-nums}
+.tile small{color:var(--muted);font-size:.82em}
+.tile .badge{margin-top:6px}
+.t-ok{border-color:var(--good)}
+.t-bad{border-color:var(--bad)}
+
+/* status badges: word + symbol, never colour alone */
+.badge{display:inline-flex;align-items:center;gap:4px;border-radius:99px;padding:2px 10px;font-size:.8em;font-weight:700;white-space:nowrap}
+.b-ok{background:var(--good-bg);color:var(--good)}
+.b-bad{background:var(--bad-bg);color:var(--bad)}
+.b-warn{background:var(--warn-bg);color:var(--warn)}
+.b-few,.b-none{background:var(--mid-bg);color:var(--muted)}
+
+/* tables */
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.tbl th,.tbl td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+.tbl thead th{font-size:.8em;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.tbl tbody th{font-weight:600}
+.tbl .grp th{background:var(--bg);font-weight:800;font-family:var(--display)}
+.bc{min-width:140px}
+.bc .bar{width:calc(100% - 4.2em)}
+.bar{display:inline-block;vertical-align:middle;height:10px;background:var(--mid-bg);border-radius:4px;overflow:hidden;min-width:40px}
+.bar i{display:block;height:100%;background:var(--red);border-radius:0 4px 4px 0}
+.bv{display:inline-block;min-width:3.6em;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+
+/* heat map */
+.heat td.hc{text-align:center;min-width:92px;border:2px solid var(--surface);border-radius:8px}
+.hc b{display:block;font-size:1.05em}
+.hc small{display:block;font-size:.75em;color:var(--muted)}
+.hc-ok{background:var(--good-bg)}
+.hc-ok small{color:var(--good)}
+.hc-bad{background:var(--bad-bg)}
+.hc-bad small{color:var(--bad);font-weight:700}
+.hc-warn{background:var(--warn-bg)}
+.hc-warn small{color:var(--warn);font-weight:700}
+.hc-mid{background:var(--mid-bg)}
+.hc-few{background:var(--surface);color:var(--muted)}
+.hc-none{color:var(--muted)}
+
+/* bar lists */
+.two-l{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:560px){.two-l{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.blist{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
+.blist li{display:grid;grid-template-columns:minmax(0,9em) 1fr auto;gap:8px;align-items:center}
+.blist .bar{width:100%}
+.tn{font-weight:600;overflow-wrap:anywhere;font-size:.92em}
+.tn small{color:var(--muted);font-weight:400}
+details summary{cursor:pointer;color:var(--muted);font-weight:700;min-height:44px;display:flex;align-items:center}
+details[open] summary{margin-bottom:6px}
+
+/* line charts */
+.chart{position:relative;width:100%}
+.chart svg{display:block;max-width:100%;height:auto;touch-action:pan-y}
+.chart .gl{stroke:var(--line);stroke-width:1}
+.chart .ax{fill:var(--muted);font-size:11px;font-family:var(--body)}
+.chart .ln{fill:none;stroke:var(--red);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.chart .pt,.chart .hp{fill:var(--red);stroke:var(--surface);stroke-width:2}
+.chart .xh{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+.chart .hit{fill:transparent;cursor:crosshair}
+.ctip{position:absolute;transform:translate(-50%,-100%);background:var(--ink);color:var(--ink-text);font-size:.82em;padding:4px 8px;border-radius:8px;pointer-events:none;white-space:nowrap}
+
+/* phones: keep tables inside the card */
+@media (max-width:560px){
+  .sec{padding:14px}
+  .tbl th,.tbl td{padding:6px 5px}
+  .tbl thead th{font-size:.68em;letter-spacing:.02em;white-space:normal}
+  .tbl tbody th{font-size:.92em}
+  .bl-name{display:none}
+  .bc{min-width:0}
+  .bc .bar{display:none}
+  .heat td.hc{min-width:0;padding:6px 2px}
+  .hc b{font-size:.95em}
+  .hc small{font-size:.66em}
+}
+
+/* sign-in */
+.login{max-width:480px}
+.lform{display:flex;flex-direction:column;gap:8px}
+.lform label{font-weight:700}
+.lform input{border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px 14px;font-size:1.05em;min-height:52px}
+.adm .msg{min-height:1.3em;color:var(--bad);font-weight:600}
+.lform label+input+label{margin-top:4px}
+.or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.85em;margin:4px 0}
+.or::before,.or::after{content:"";flex:1;border-top:1px solid var(--line)}
