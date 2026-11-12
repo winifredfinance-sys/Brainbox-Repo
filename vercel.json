@@ -1,15 +1,48 @@
 {
   "cleanUrls": true,
   "headers": [
-    { "source": "/(.*)", "headers": [
-      { "key": "X-Content-Type-Options", "value": "nosniff" },
-      { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
-    ]},
-    { "source": "/admin", "headers": [
-      { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
-    ]},
-    { "source": "/(css|js)/(.*)", "headers": [
-      { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
-    ]}
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    },
+    {
+      "source": "/admin",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/(css|js)/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/brainbox-react",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/brainbox-react/:path*",
+      "destination": "/",
+      "permanent": false
+    }
   ]
 }
