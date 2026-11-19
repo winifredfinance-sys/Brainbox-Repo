@@ -1,6 +1,7 @@
 /* Nigerian words for Word Games: [WORD, category]. Single words only (no spaces).
    Generated from the old game by scripts/extract-from-v2.mjs, then edited by hand from here on. */
-export const WORDS=[["KANO","city"],
+import {WORDS_MORE} from './words-more.js';
+export const WORDS_OLD=[["KANO","city"],
   ["LAGOS","city"],
   ["ABUJA","city"],
   ["ENUGU","city"],
@@ -104,3 +105,5 @@ export const WORDS=[["KANO","city"],
   ["OLUMO","landmark"],
   ["IDANRE","landmark"],
   ["ASOROCK","landmark"]];
+/* old list plus the Nov 2026 additions */
+export const WORDS=WORDS_OLD.concat(WORDS_MORE);

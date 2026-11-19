@@ -24,9 +24,9 @@ begin
     band := (array['kids','kids','kids','teens','teens','teens','adults','adults','adults','adults','adults','elders'])[1 + floor(random() * 12)::int];
     types := case band
       when 'kids'   then array['count','sums','patterns','odd','skip','mix']
-      when 'teens'  then array['maths','seq','words','proverbs','riddles','mix']
-      when 'adults' then array['money','maths','seq','words','proverbs','riddles','memory','mix']
-      else               array['memory','proverbs','riddles','words','numbers','mix'] end;
+      when 'teens'  then array['maths','seq','words','proverbs','riddles','naija','mix']
+      when 'adults' then array['money','maths','seq','words','proverbs','riddles','memory','naija','mix']
+      else               array['memory','proverbs','riddles','words','numbers','naija','mix'] end;
     first_day := (now() at time zone 'Africa/Lagos')::date - floor(random() * 45)::int;
     nses := 1 + floor(random() * random() * 7)::int;
 

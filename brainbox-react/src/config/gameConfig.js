@@ -57,5 +57,5 @@ export const HOME_PREVIEW_SIZE=3;          /* players shown on the home screen *
 export const NICKNAME_MAX=20;
 
 /* Highest total anyone can reach, used to spot impossible scores:
-   26 puzzle types x ROUNDS_PER_LEVEL x (200 + 300 + 400) = 234,000 */
+   29 puzzle types (incl. Naija Knowledge, Nov 2026) x ROUNDS_PER_LEVEL x (200 + 300 + 400) = 261,000 */
 export const roundMaxPoints=level=>Math.round(SPEED.max*LEVEL_MULTIPLIER[level])*QUESTIONS_PER_ROUND;

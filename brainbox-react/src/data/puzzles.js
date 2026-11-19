@@ -13,13 +13,13 @@ export const PUZZLES={
     {id:'sums',name:"Add & Take Away",glyph:"+  −",blurb:"Easy sums with fruit and numbers.",
      levels:[
        [["addE",5]],
-       [["add",10],["sub",10],["addE",10]],
-       [["add",20],["sub",20]]]},
+       [["add",10],["sub",10],["addE",10],["missingAdd",10]],
+       [["add",20],["sub",20],["sum3",50],["missingAdd",30]]]},
     {id:'patterns',name:"Patterns",glyph:"▲●▲",blurb:"What comes next in the pattern?",
      levels:[
-       [["pattern","AB"]],
-       [["pattern","AB"],["pattern","AAB"],["pattern","ABB"]],
-       [["pattern","AAB"],["pattern","ABC"],["pattern","AABB"]]]},
+       [["pattern","AB"],["shapes",1],["shapePattern","AB"]],
+       [["pattern","AB"],["pattern","AAB"],["pattern","ABB"],["shapes",2],["shapePattern","ABB"]],
+       [["pattern","AAB"],["pattern","ABC"],["pattern","AABB"],["shapes",3],["shapePattern","ABC"]]]},
     {id:'odd',name:"Odd One Out",glyph:"≠",blurb:"Spot the one that does not belong.",
      levels:[
        [["oddOne",1]],
@@ -34,19 +34,19 @@ export const PUZZLES={
   teens:[
     {id:'maths',name:"Maths",glyph:"×  ÷",blurb:"Times tables, percentages and algebra.",
      levels:[
-       [["mult",2,9],["bigAdd",10,60],["percent",[10,50]]],
-       [["mult",6,12],["bigAdd",40,99],["percent",[10,20,25,50]],["bigSub",50,200]],
-       [["algebra"],["percent",[15,30,35,60]],["mult",11,19],["bigSub",100,900]]]},
+       [["mult",2,9],["bigAdd",10,60],["percent",[10,50]],["fraction",1]],
+       [["mult",6,12],["bigAdd",40,99],["percent",[10,20,25,50]],["bigSub",50,200],["fraction",2]],
+       [["algebra"],["percent",[15,30,35,60]],["mult",11,19],["bigSub",100,900],["fraction",3],["multiStep",2]]]},
     {id:'seq',name:"Number Sequences",glyph:"3 6 9",blurb:"Find the rule and the next number.",
      levels:[
        [["seqA",[2,3,5,10]]],
-       [["seqA",[6,7,8,9,11,12]],["seqGrow"]],
-       [["seqGeo"],["seqFib"],["seqSq"],["seqGrow"]]]},
+       [["seqA",[6,7,8,9,11,12]],["seqGrow"],["seqAlt"]],
+       [["seqGeo"],["seqFib"],["seqSq"],["seqGrow"],["seqAlt"],["seqMul"],["seqTri"]]]},
     {id:'words',name:"Word Games",glyph:"Abc",blurb:"Unscramble Nigerian words and fill the gap.",
      levels:[
-       [["scramble",3,6],["missingLetter",3,6]],
-       [["scramble",5,9],["missingLetter",5,9]],
-       [["scramble",7,12],["missingLetter",7,12]]]},
+       [["scramble",3,6],["missingLetter",3,6],["wordQ",1]],
+       [["scramble",5,9],["missingLetter",5,9],["wordQ",2]],
+       [["scramble",7,12],["missingLetter",7,12],["wordQ",3]]]},
     {id:'proverbs',name:"Proverbs",glyph:"“ ”",blurb:"Finish the proverb and learn what it means.",
      levels:[
        [["proverb",1],["proverbRev",1]],
@@ -56,7 +56,12 @@ export const PUZZLES={
      levels:[
        [["riddle",1,1],["logic",1,1],["order",1],["day"],["order",1],["day"]],
        [["riddle",1,2],["logic",1,2],["order",2],["age"],["share"],["day"],["order",2],["age"],["share"],["day"]],
-       [["riddle",3,3],["logic",2,3],["order",3],["age"],["ratio"],["order",3],["age"],["ratio"]]]}
+       [["riddle",3,3],["logic",2,3],["order",3],["age"],["ratio"],["order",3],["age"],["ratio"]]]},
+    {id:'naija',name:"Naija Knowledge",glyph:"NG",blurb:"States, food, culture and famous Nigerian firsts.",
+     levels:[
+       [["naija",1,"teens"]],
+       [["naija",2,"teens"]],
+       [["naija",3,"teens"]]]}
   ],
   adults:[
     {id:'money',name:"Naira Maths",glyph:"₦",blurb:"Market totals, VAT, interest, profit and loss.",
@@ -66,19 +71,19 @@ export const PUZZLES={
        [["nProfitPct"],["nReverse"],["nSuccessive"],["nCompound"],["nInstal"],["nBreakEven"]]]},
     {id:'maths',name:"Mental Maths",glyph:"×  ÷",blurb:"Quick sums, percentages and algebra.",
      levels:[
-       [["mult",6,12],["bigAdd",50,200],["bigSub",100,500],["percent",[10,20,50]]],
-       [["mult",11,25],["percent",[15,25,35,60]],["algebra"],["bigSub",200,900]],
-       [["algebra"],["mult",13,29],["percent",[12,18,35,45]],["avg"]]]},
+       [["mult",6,12],["bigAdd",50,200],["bigSub",100,500],["percent",[10,20,50]],["multiStep",1],["estimate",1]],
+       [["mult",11,25],["percent",[15,25,35,60]],["algebra"],["bigSub",200,900],["multiStep",2],["estimate",2],["ratioSimple"]],
+       [["algebra"],["mult",13,29],["percent",[12,18,35,45]],["avg"],["multiStep",3],["estimate",3],["ratio"]]]},
     {id:'seq',name:"Number Sequences",glyph:"3 6 9",blurb:"Spot the rule behind the numbers.",
      levels:[
        [["seqA",[3,4,6,7,8]]],
-       [["seqGrow"],["seqA",[9,11,12,13]],["seqGeo"]],
-       [["seqFib"],["seqSq"],["seqGeo"],["seqGrow"]]]},
+       [["seqGrow"],["seqA",[9,11,12,13]],["seqGeo"],["seqAlt"]],
+       [["seqFib"],["seqSq"],["seqGeo"],["seqGrow"],["seqAlt"],["seqMul"],["seqTri"]]]},
     {id:'words',name:"Word Games",glyph:"Abc",blurb:"Nigerian cities, foods and landmarks.",
      levels:[
-       [["scramble",3,6],["missingLetter",3,6]],
-       [["scramble",5,9],["missingLetter",5,9]],
-       [["scramble",7,12],["missingLetter",7,12]]]},
+       [["scramble",3,6],["missingLetter",3,6],["wordQ",1]],
+       [["scramble",5,9],["missingLetter",5,9],["wordQ",2]],
+       [["scramble",7,12],["missingLetter",7,12],["wordQ",3]]]},
     {id:'proverbs',name:"Proverbs",glyph:"“ ”",blurb:"Finish the proverb and explain its meaning.",
      levels:[
        [["proverb",1],["proverbRev",1]],
@@ -93,7 +98,12 @@ export const PUZZLES={
      levels:[
        [["memory",4]],
        [["memory",6]],
-       [["memory",8]]]}
+       [["memory",8]]]},
+    {id:'naija',name:"Naija Knowledge",glyph:"NG",blurb:"History, places, food, arts and sport.",
+     levels:[
+       [["naija",1,"adults"]],
+       [["naija",2,"adults"]],
+       [["naija",3,"adults"]]]}
   ],
   elders:[
     {id:'memory',name:"Memory",glyph:"▢▢▢",blurb:"Remember a shopping list, then recall it.",
@@ -113,13 +123,18 @@ export const PUZZLES={
        [["riddle",2,3],["logic",1,2],["order",3],["age"],["ratio"],["share"]]]},
     {id:'words',name:"Word Games",glyph:"Abc",blurb:"Nigerian cities and foods.",
      levels:[
-       [["scramble",3,5],["missingLetter",3,5]],
-       [["scramble",4,7],["missingLetter",4,7]],
-       [["scramble",6,10],["missingLetter",6,10]]]},
+       [["scramble",3,5],["missingLetter",3,5],["wordQ",1]],
+       [["scramble",4,7],["missingLetter",4,7],["wordQ",2]],
+       [["scramble",6,10],["missingLetter",6,10],["wordQ",3]]]},
     {id:'numbers',name:"Number Puzzles",glyph:"+  ₦",blurb:"Gentle sums, sequences and market change.",
      levels:[
-       [["seqA",[2,5,10]],["change",500],["bigAdd",10,40]],
-       [["seqA",[3,4,6]],["change",1000],["discount",[10]],["bigSub",30,100]],
-       [["seqGrow"],["discount",[10,20,25]],["change",2000],["percent",[10,50]]]]}
+       [["seqA",[2,5,10]],["change",500],["bigAdd",10,40],["roundTo",1],["doubleHalf",1],["shapePattern","AB"]],
+       [["seqA",[3,4,6]],["change",1000],["discount",[10]],["bigSub",30,100],["roundTo",2],["doubleHalf",2],["shapePattern","ABC"]],
+       [["seqGrow"],["discount",[10,20,25]],["change",2000],["percent",[10,50]],["multiStep",1],["roundTo",3],["shapePattern","AABB"]]]},
+    {id:'naija',name:"Naija Knowledge",glyph:"NG",blurb:"Food, music, festivals and places we love.",
+     levels:[
+       [["naija",1,"elders"]],
+       [["naija",2,"elders"]],
+       [["naija",3,"elders"]]]}
   ]
 };

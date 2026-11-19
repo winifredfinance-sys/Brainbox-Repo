@@ -146,6 +146,15 @@ const go=async(p,band,type,level,round)=>{await startGame(p);if(!(await p.inputV
   // F18 admin page
   {const {p,ctx,errs}=await open(b,{url:NEW.replace('index.html','admin.html')});await p.waitForTimeout(1500);const t=await p.textContent('#adm');
    ok('S11','admin page shows the sign-in',/Admin sign-in/.test(t),t.slice(0,120));ok('S11','admin: no page errors',!errs.length,errs);await ctx.close()}
+  // Naija Knowledge (Nov 2026): a full Hard round in each band, recorded in stats as 'naija'
+  for(const [band,idx] of [['teens',5],['adults',7],['elders',5]]){const {p,net,errs,ctx}=await open(b);await go(p,band,idx,2,0);
+   const title=await p.textContent('main');ok('Q2',`${band}: Naija Knowledge round opens`,/Naija Knowledge/.test(title));
+   await p.getByRole('button',{name:'Start round'}).click();const qs=new Set();
+   for(let i=0;i<10;i++){await p.waitForSelector('.opt:not([disabled])');qs.add(await p.textContent('.qtext, .q, main h2').catch(()=>i));await p.locator('.opt').nth(0).click();await p.locator('#nextbtn').click()}
+   await p.waitForTimeout(800);if(band==='teens')await p.screenshot({path:process.env.SHOT||'/tmp/naija-results.png'});
+   ok('Q2',`${band}: 10 questions answered, results shown`,/Round 1|Accuracy|pts/i.test(await p.textContent('main')));
+   await p.waitForTimeout(2500);const rc=net.events.find(e=>e.event_type==='round_complete')||{};ok('T1',`${band}: stats round sent as naija`,rc.puzzle_type==='naija',JSON.stringify(rc).slice(0,120));
+   ok('Q2',`${band}: no page errors`,!errs.length,errs);await ctx.close()}
   // F20 season reset
   {const {p,ctx}=await open(b,{storage:{'bn-nick':'Old','bn-profiles-v2':{Old:{teens_maths_0_0:{s:2,p:999,t:5}}}}});const v=await p.evaluate(()=>JSON.parse(localStorage.getItem('bn-profiles-v2')).Old.teens_maths_0_0);
    ok('R10','Season 2: old points cleared once, stars and times kept',v.p===0&&v.s===2&&v.t===5,JSON.stringify(v));await ctx.close()}

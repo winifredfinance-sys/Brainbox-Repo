@@ -86,9 +86,12 @@ All questions and word lists are in **`src/data/`**. Open a file in any text edi
 
 | File | What is in it | Example entry |
 |---|---|---|
-| `proverbs.js` | African proverbs | `{"id":"pv055","e":1,"t":"A tree is known by its ___.","a":"fruit","w":["leaves","roots","shade"],"m":"People are judged by what they do."}` |
-| `riddles.js` | Riddles | `{"id":"rd067","lv":1,"q":"What has a face but no eyes?","a":"A clock","w":["A coin","A ball","A cup"],"why":"A clock has a face."}` |
-| `logic.js` | Logic puzzles | same shape as riddles |
+| `proverbs.js`, `proverbs-more.js` | African proverbs (the second file also has `PROVERB_THEME`: proverbs with the same lesson are never offered together) | `{"id":"pv055","e":1,"t":"A tree is known by its ___.","a":"fruit","w":["leaves","roots","shade"],"m":"People are judged by what they do."}` |
+| `riddles.js`, `riddles-more.js` | Riddles | `{"id":"rd067","lv":1,"q":"What has a face but no eyes?","a":"A clock","w":["A coin","A ball","A cup"],"why":"A clock has a face."}` |
+| `logic.js`, `logic-more.js` | Logic puzzles | same shape as riddles |
+| `words-more.js` | Word puzzles (meanings, opposites, spelling, plurals, Pidgin, greetings, idioms) and more Nigerian words | same shape as riddles |
+| `bands/teens.js`, `bands/adults.js`, `bands/elders.js` | Naija Knowledge facts for each age band | same shape as riddles |
+| `naija/common.js`, `naija/states.js` | Easy Naija facts for every band; the 36 states with capitals and zones, towns and places (questions are made from these) | `['Kogi','Lokoja','North Central',2]` |
 | `words.js` | Nigerian words for Word Games | `["KADUNA","city"]` (capital letters, one word) |
 | `lists.js` | Fruit emoji, shopping items, names, prices used by other questions | |
 | `names.js` | Words for the Shuffle ninja names | |
@@ -103,13 +106,17 @@ Rules of thumb:
 - **Wrong options:** make them believable but clearly wrong.
 - **Answers:** check the answer is not also in the wrong options.
 - **Length:** keep text short, since most players are on phones.
-- **Proverbs and riddles:** have a Nigerian reader check them before a wide launch.
+- **Proverbs and riddles:** have a Nigerian reader check them before a wide launch. Proverbs we were unsure of are in `docs/PROVERBS-TO-CHECK.md`, not in the game.
+- **Naija Knowledge:** nothing political (no parties, leaders' records or conflicts). Dates, places, food, culture and "firsts" are fine.
+- **Same text twice:** every question needs its own wording (the question text is its id). `npm test` checks this.
 
-Maths, sequences, money, counting, patterns and memory questions are **made fresh each time** by small formulas in `src/engine/generators.js`, so there is no list of them. To make them harder or easier, change the numbers in `src/data/puzzles.js`: for example `["mult",6,12]` means times tables from 6 to 12.
+Maths, sequences, money, counting, patterns, shapes and memory questions are **made fresh each time** by small formulas in `src/engine/generators.js` and `src/engine/moreGenerators.js`, so there is no list of them. To make them harder or easier, change the numbers in `src/data/puzzles.js`: for example `["mult",6,12]` means times tables from 6 to 12.
 
 After editing, **rebuild and publish**: run `npm run build` and upload the new `dist` folder. Run `npm test` first; it checks every question pool.
 
-`docs/QUESTION-POOLS.md` lists how many different questions each level can give. **Beginner Proverbs is too small**: add about 10 easy proverbs.
+`docs/QUESTION-POOLS.md` lists how many different questions each level can give (every level now has at least 100). To refresh it: `node tests/engine.test.mjs --report && node scripts/pool-report.mjs`.
+
+Want general-knowledge trivia too? See `docs/OPEN-TRIVIA-DB.md` (licence, attribution line and steps; nothing downloaded yet).
 
 ---
 
@@ -132,7 +139,7 @@ Open **`src/config/gameConfig.js`**. Everything is explained in the file. The ma
 
 Then run `npm run build` and publish the new `dist` folder.
 
-**About the leaderboard:** changing points (`SPEED`, `LEVEL_MULTIPLIER`, `ROUNDS_PER_LEVEL`) changes how high totals can go. The database check in `supabase/hardening.sql` allows totals up to 234,000, so update that number too if you raise points.
+**About the leaderboard:** changing points (`SPEED`, `LEVEL_MULTIPLIER`, `ROUNDS_PER_LEVEL`) changes how high totals can go. The database check in `supabase/hardening.sql` allows totals up to 261,000 (29 puzzle types × 10 rounds × 900), so update that number too if you raise points.
 
 ---
 
@@ -145,12 +152,12 @@ Then run `npm run build` and publish the new `dist` folder.
   - The Supabase client is the vendored file `public/vendor/supabase-2.118.0.js`, loaded only when needed.
 - **Layout:**
   - `src/config` holds the rules and `src/data` the content.
-  - `src/engine` is pure logic with no React: `generators.js` (question makers, copied verbatim from the old game), `questions.js` (round builder, no repeats), `ramp.js` (harder rounds later in a level), `adaptive.js` (one function, `decide()`), `scoring.js` and `daily.js`.
+  - `src/engine` is pure logic with no React: `generators.js` (question makers, copied verbatim from the old game), `moreGenerators.js` (Nov 2026 makers), `naija.js` (Naija Knowledge), `questions.js` (round builder, no repeats), `ramp.js` (harder rounds later in a level), `adaptive.js` (one function, `decide()`), `scoring.js` and `daily.js`.
   - `src/services` handles storage and the outside world: `storage.js` (every localStorage call in try/catch), `progress.js`, `leaderboard.js` (`saveScore` / `getTopScores`; swap the adapter to change database), `leaderboardOnline.js`, `track.js` (anonymous stats) and `sound.js`.
   - `src/game/useGame.js` holds the game state and actions. `src/screens` and `src/components` are the UI.
 - **Storage keys** are the same as the old game (`bn-profiles-v2` etc.), so players keep their progress.
 - **Tests:**
-  - `npm test` runs the engine checks.
-  - `node tests/generators-parity.mjs ../js` checks that questions are identical to the old game (needs the old `js/` folder).
+  - `npm test` runs the engine checks, the new question makers (`new-generators-check.mjs`), the written content (`content-check.mjs`: one right answer, 3 different wrong options, unique texts) and `difficulty-check.mjs` (no repeats in a level; difficulty rises Beginner → Medium → Hard).
+  - `node tests/generators-parity.mjs ../js` checks that every question maker the old game also has still gives identical questions (needs the old `js/` folder).
   - `tests/browser-check.cjs` (66 browser checks) and `tests/parity-old-vs-new.cjs` need Playwright. Instructions are at the top of each file.
 - **`scripts/extract-from-v2.mjs`** was used once to move the questions out of the old code. It is not needed again.

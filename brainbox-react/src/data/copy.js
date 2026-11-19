@@ -18,6 +18,7 @@ export const TIPS={
  "riddles": "Read the riddle twice. The answer often hides in plain words.",
  "money": "Work in steps: the total first, then the change. For a percentage, find 10% first and build from it.",
  "memory": "Group the items into pairs or picture a market stall. Linking them helps you recall.",
+ "naija": "Picture the map of Nigeria: north, south, east and west. Wrong options often come from the same zone.",
  "numbers": "Take it slowly. For change, count up from the price to the amount paid.",
  "mix": "Answer in the first half of the timer to earn the biggest speed bonus."
 };

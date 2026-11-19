@@ -38,7 +38,7 @@ export const TRACK=(()=>{
   const isUuid=s=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(s||''));
   const int=(v,lo,hi)=>Math.min(hi,Math.max(lo,Math.round(+v||0)));
   const BANDS_OK=['kids','teens','adults','elders'];
-  const TYPES_OK=['count','sums','patterns','odd','skip','maths','seq','words','proverbs','riddles','money','memory','numbers','mix'];
+  const TYPES_OK=['count','sums','patterns','odd','skip','maths','seq','words','proverbs','riddles','money','memory','numbers','naija','mix'];
 
   /* ---------- identity: random device ID; a new session per visit or after 30 minutes away ---------- */
   let device=on?ls.get(DK):null;

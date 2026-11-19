@@ -87,7 +87,7 @@ create table if not exists public.events (
   constraint events_band check (age_band is null or age_band in ('kids', 'teens', 'adults', 'elders')),
   constraint events_puzzle check (puzzle_type is null or puzzle_type in (
     'count', 'sums', 'patterns', 'odd', 'skip', 'maths', 'seq', 'words', 'proverbs',
-    'riddles', 'money', 'memory', 'numbers', 'mix')),
+    'riddles', 'money', 'memory', 'numbers', 'naija', 'mix')),
   constraint events_ranges check (
         (level is null or level between 0 and 2)
     and (round_no is null or round_no between 0 and 9)
@@ -136,6 +136,10 @@ alter table public.events add column if not exists streak     smallint;
 alter table public.events drop constraint if exists events_type;
 alter table public.events drop constraint if exists events_ranges;
 alter table public.events drop constraint if exists events_shape;
+alter table public.events drop constraint if exists events_puzzle;
+alter table public.events add constraint events_puzzle check (puzzle_type is null or puzzle_type in (
+    'count', 'sums', 'patterns', 'odd', 'skip', 'maths', 'seq', 'words', 'proverbs',
+    'riddles', 'money', 'memory', 'numbers', 'naija', 'mix'));   -- 'naija' = Naija Knowledge (Nov 2026)
 alter table public.events add constraint events_type check (event_type in ('session_start', 'round_complete', 'round_abandoned', 'daily_target_hit'));
 alter table public.events add constraint events_ranges check (
         (level is null or level between 0 and 2)

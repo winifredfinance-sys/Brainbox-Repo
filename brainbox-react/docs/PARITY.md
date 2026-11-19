@@ -16,7 +16,7 @@ Checked on 12 Nov 2026 against the built `dist/` folder.
 | S1c | Returning player: "Welcome back, NAME!", Continue, "Not you? Switch player"; Who is playing? (one tap per profile, Add new player); privacy note under the name box; 30-minute timeout drops only the round | ✅ same text as the live game; 19 scenario checks (`tests/players-check.cjs`) |
 | S2 | How to play: 4 steps and scoring rules; Back returns to the previous screen | ✅ same text |
 | S3 | Home: name box (20 max), Shuffle (Adjective+Noun+3–4 digits), taken-name note, empty name blocked, Sound/Vibration switches, Daily card, 4 age bands with points, top-3 preview, footer | ✅ same text; pixel-identical; behaviour checks pass |
-| S4 | Puzzle types for all 4 bands (26 types incl. Mix It Up), "n of 30 rounds passed" | ✅ same text for every band |
+| S4 | Puzzle types for all 4 bands (26 types incl. Mix It Up; 29 since Naija Knowledge was added in Nov 2026), "n of 30 rounds passed" | ✅ same text for every band |
 | S5 | Levels: all 3 open, trade-off line, "Start here", New / n/10 / Cleared ✓, stars | ✅ same text · *changed:* darker status colour |
 | S6 | Rounds: 10 tiles, stars, points, rounds open in order, "Continue with Round N" | ✅ same text · *changed:* star outline |
 | S7 | Get ready card: facts, "Answer fast for more points", adaptive chip, mute, Start round | ✅ same text; chip shown after 3 strong rounds |
@@ -31,7 +31,7 @@ Checked on 12 Nov 2026 against the built `dist/` folder.
 | # | Rule | Result |
 |---|---|---|
 | R1 | 4 bands (Little Minds, Sharp Teens, Adult Brain Gym, Golden Minds); no age typed | ✅ |
-| R2 | Puzzle types per band + Mix It Up; level setups identical to the old game | ✅ all 78 level setups compared |
+| R2 | Puzzle types per band + Mix It Up | ✅ *changed (Nov 2026):* new Naija Knowledge type and new question makers in many levels (see `CHANGES.md`) |
 | R3 | 3 levels × 10 rounds × 10 questions; levels open; rounds in order | ✅ |
 | R4 | Seconds per question (4–10 30/30/30 · 11–17 20/25/30 · 18–59 25/30/40 · 60+ 40/45/50); clock starts on Start round; memory clock starts after "I have remembered them" | ✅ (time-up checked with a fake clock) |
 | R5 | Points 20→5 by speed × 1/1.5/2; pass 6/10; stars 60/80/90% | ✅ |
@@ -41,7 +41,7 @@ Checked on 12 Nov 2026 against the built `dist/` folder.
 | R9 | No repeats | ✅ *changed (improved)*: per nickname; deck for lists |
 | R10 | Season 2 reset (old points cleared once, stars and times kept) | ✅ |
 | R11 | Keyboard: A–D / 1–4, Enter for next | ✅ |
-| Q | Questions identical to the old game (same random numbers in → same questions out) | ✅ 32,250 compared |
+| Q | Every question maker the old game also has gives identical questions (same random numbers in → same questions out) | ✅ 32,400 compared |
 
 ## Saved data, online features, quality
 | # | Item | Result |

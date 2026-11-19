@@ -38,3 +38,7 @@ export function rampPicker(specs,l,round){
 /* Naira Maths makers (from bank.js) */
 Object.assign(DIFF,{nBasket:k=>1.5+k*.5,nChange:()=>3,nUnit:()=>3.5,nVat:()=>3.5,nInterest:()=>3.5,nSplit:()=>3,nPct:()=>3.5,
   nProfitPct:()=>4.5,nReverse:()=>4.5,nSuccessive:()=>4,nCompound:()=>4.5,nInstal:()=>4,nBreakEven:()=>4});
+/* New makers (Nov 2026): shapes, fractions, multi-step sums, estimation, more sequences, word puzzles, Naija Knowledge */
+Object.assign(DIFF,{shapes:lv=>1+lv*.5,shapePattern:k=>({AB:1.5,ABB:2,ABC:2.5,AABB:2.5,ABCB:3})[k]||2,sum3:m=>3+m/50,missingAdd:m=>3+m/30,
+  fraction:lv=>2+lv,seqAlt:()=>3.5,seqMul:()=>4,seqTri:()=>3.5,multiStep:lv=>2.5+lv,estimate:lv=>2+lv,ratioSimple:()=>3,
+  roundTo:lv=>1+lv*.7,doubleHalf:lv=>1.5+lv*.5,wordQ:lv=>1+lv,naija:lv=>lv});
