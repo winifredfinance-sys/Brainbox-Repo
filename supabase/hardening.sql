@@ -2,14 +2,14 @@
 -- Run in Supabase: SQL Editor -> New query -> paste this whole file -> Run. Safe to run again.
 --
 -- Why: the publishable key in the game is public (it has to be), so anyone could insert any score straight
--- into public.leaderboard, for example 166,000,000. The real maximum is 234,000: 26 puzzle types x 10 rounds
+-- into public.leaderboard, for example 166,000,000. The real maximum is 261,000: 29 puzzle types x 10 rounds
 -- x (200 + 300 + 400) points.
 --
 -- What it does
 --   1. Moves impossible scores and bad names into private.leaderboard_removed (a backup, not reachable
 --      through the API), then deletes them from the board.
 --   2. Keeps one entry per player and nickname (the best one); older duplicates go to the same backup.
---   3. Adds checks: score 0-234,000; name 2-20 characters with no HTML or control characters.
+--   3. Adds checks: score 0-261,000; name 2-20 characters with no HTML or control characters.
 --   4. Adds public.submit_score(name, score), the only way to write a score from now on. It
 --        - uses the signed-in (anonymous) user's own id, never one sent by the browser,
 --        - lets a total grow by at most 400 points per 20 seconds and 25,000 points per Lagos day,
@@ -54,7 +54,7 @@ update public.leaderboard set player_name = btrim(player_name) where player_name
 
 with gone as (
   delete from public.leaderboard
-  where score is null or score < 0 or score > 234000
+  where score is null or score < 0 or score > 261000
      or player_name is null or char_length(btrim(player_name)) not between 2 and 20
      or player_name ~ '[<>&"''\\/[:cntrl:]]'
   returning id, user_id, player_name, score, created_at
@@ -87,7 +87,7 @@ alter table public.leaderboard drop constraint if exists leaderboard_score_nonne
 alter table public.leaderboard drop constraint if exists leaderboard_name_len;
 alter table public.leaderboard drop constraint if exists leaderboard_score_range;
 alter table public.leaderboard drop constraint if exists leaderboard_name_ok;
-alter table public.leaderboard add constraint leaderboard_score_range check (score between 0 and 234000);
+alter table public.leaderboard add constraint leaderboard_score_range check (score between 0 and 261000);
 alter table public.leaderboard add constraint leaderboard_name_ok check (
       char_length(player_name) between 2 and 20
   and player_name = btrim(player_name)
@@ -107,7 +107,7 @@ as $$
 declare
   v_uid   uuid := auth.uid();
   v_name  text := btrim(coalesce(p_name, ''));
-  v_want  integer := greatest(0, least(coalesce(p_score, 0), 234000));
+  v_want  integer := greatest(0, least(coalesce(p_score, 0), 261000));
   v_today date := (now() at time zone 'Africa/Lagos')::date;
   v_row   public.leaderboard%rowtype;
   v_base  integer;

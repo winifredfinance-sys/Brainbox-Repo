@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build && vite build --config vite.admin.config.js",
     "preview": "vite preview",
-    "test": "node tests/engine.test.mjs"
+    "test": "node tests/engine.test.mjs && node tests/new-generators-check.mjs && node tests/content-check.mjs && node tests/difficulty-check.mjs"
   },
   "dependencies": {
     "react": "19.2.9",

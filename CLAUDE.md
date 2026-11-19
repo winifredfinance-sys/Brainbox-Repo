@@ -3,10 +3,11 @@
 Free, timed puzzle game for Nigerian players aged 4 to 60+, built to give every age a short daily workout for memory and focus. Portfolio project for a senior product manager. Deployed as a static site on Vercel from GitHub (winifredfinance-sys/Brainbox-Repo, branch `main`).
 
 ## React version (Nov 2026, not live yet)
-- `brainbox-react/` is the same game rebuilt with React 19 + Vite 8 (owner's decision). It is NOT live until the Vercel project's Root Directory is set to `brainbox-react` (see brainbox-react/README.md). Until then the vanilla files below are the live game; keep both in step or finish the switch.
+- `brainbox-react/` is the same game rebuilt with React 19 + Vite 8 (owner's decision). It goes live when the Vercel project's Root Directory is set to `brainbox-react` (see brainbox-react/README.md). Owner decision (Nov 2026): the React version is the source of truth; new features and questions are built there only. The vanilla files below stay as they are until the switch and are then retired.
+- Question system upgrade (Nov 2026, React only): new puzzle type `naija` (Naija Knowledge) for teens/adults/elders; more proverbs (`proverbs-more.js`, `PROVERB_THEME` keeps same-lesson proverbs apart), riddles, logic, word puzzles (`words-more.js`), Naija data in `src/data/bands/` and `src/data/naija/`; new makers in `src/engine/moreGenerators.js`. Every level pool has 100+ questions (`docs/QUESTION-POOLS.md`). Uncertain proverbs go in `docs/PROVERBS-TO-CHECK.md`, never in the game. Open Trivia DB is NOT imported (`docs/OPEN-TRIVIA-DB.md`); do not fetch it without the owner's OK.
 - Rules live in `brainbox-react/src/config/gameConfig.js`, questions in `brainbox-react/src/data/`, logic in `src/engine/` (no React), outside world in `src/services/` (storage, leaderboard adapter, stats, sound), state in `src/game/useGame.js`, UI in `src/screens/`.
 - Same storage keys and Supabase calls as the vanilla game. Build is a single self-contained `dist/index.html` (vite-plugin-singlefile) plus `config.js`, `admin.html`, `vendor/`.
-- Checks: `npm test` (engine), `node tests/generators-parity.mjs ../js` (questions identical to the vanilla game), `tests/browser-check.cjs` and `tests/parity-old-vs-new.cjs` (Playwright). Parity checklist: `brainbox-react/docs/PARITY.md`.
+- Checks: `npm test` (engine, new makers, written content, difficulty B→M→H and no repeats), `node tests/generators-parity.mjs ../js` (makers shared with the vanilla game give identical questions), `tests/browser-check.cjs` and `tests/parity-old-vs-new.cjs` (Playwright). Parity checklist: `brainbox-react/docs/PARITY.md`.
 
 ## Stack and rules
 - Plain HTML, CSS and JavaScript. No framework, no build step, no npm dependencies. Third-party code is vendored with an exact version (`js/vendor/supabase-2.118.0.js`).
@@ -21,7 +22,7 @@ Free, timed puzzle game for Nigerian players aged 4 to 60+, built to give every 
 - Collect no personal data: no emails, real names, locations or IP addresses. Players never sign in (the leaderboard uses anonymous Supabase sign-in; stats use no sign-in at all).
 - Stats identify a browser only by a random UUID (`bn-device-v1`), never linked to the leaderboard's anonymous user id. Events include the nickname (ninja name), as agreed with the owner.
 - Only the Supabase PUBLISHABLE key (`sb_publishable_…`) may appear in the repo (`js/config.js`). Never add a `service_role` or `sb_secret_` key anywhere.
-- `public.events` (event types: session_start, round_complete, round_abandoned, daily_target_hit; points per round 0–400): anon/authenticated may INSERT (only the gameplay columns, with CHECK constraints). Only admins (`private.admins` email list, non-anonymous session) can SELECT or call `public.admin_stats()`. Nobody can UPDATE/DELETE via the API.
+- `public.events` (event types: session_start, round_complete, round_abandoned, daily_target_hit; points per round 0–400; puzzle types include `naija`): anon/authenticated may INSERT (only the gameplay columns, with CHECK constraints). Only admins (`private.admins` email list, non-anonymous session) can SELECT or call `public.admin_stats()`. Nobody can UPDATE/DELETE via the API.
 - All database text shown in HTML must go through `esc()`.
 
 ## Files
@@ -39,7 +40,7 @@ Free, timed puzzle game for Nigerian players aged 4 to 60+, built to give every 
 - `js/sound.js`: `FX`, sound effects made with the Web Audio API (no audio files) and vibration (`navigator.vibrate`, Android only). Sounds: right, wrong, timeout, tick (last 5 s), pass, fail, big (daily target / level cleared). Both on by default; vibration starts off if the device asks for reduced motion. Saved as `bn-sound` / `bn-vibe`. Called from app.js only through the wrapped `fx()`. Switches on the home screen, 🔊 mute button on the Get ready card and during play.
 - `js/app.js`: screens, state `S`, scoring, unlocks, adaptive difficulty, leaderboard view. Tracking hooks: `startRound` (roundStart), `answer` (progress, timeout count `S.to`), `finish` (roundEnd), `go` (roundQuit when leaving a live round).
 - `admin.html`, `js/admin.js`, `css/admin.css`: admin dashboard (noindex, not linked). Email + password sign-in (`signInWithPassword`) or email link (`signInWithOtp`, `shouldCreateUser:false`), one RPC `admin_stats(p_from, p_to, p_band)`, plain-SVG charts.
-- `supabase/leaderboard.sql`, `supabase/schema.sql` (stats; section 2b upgrades an older events table, safe to re-run), `supabase/seed_test.sql` (test data, `is_test = true`), `supabase/season2.sql` (one-off leaderboard reset with backup), `supabase/hardening.sql` (leaderboard security: one row per account+name, score 0–234,000, `submit_score()` is the only write path with growth limits of 400 points per 20 s and 25,000 per Lagos day, ban list `private.banned_users`, removed rows backed up in `private.leaderboard_removed`).
+- `supabase/leaderboard.sql`, `supabase/schema.sql` (stats; section 2b upgrades an older events table, safe to re-run), `supabase/seed_test.sql` (test data, `is_test = true`), `supabase/season2.sql` (one-off leaderboard reset with backup), `supabase/hardening.sql` (leaderboard security: one row per account+name, score 0–261,000, `submit_score()` is the only write path with growth limits of 400 points per 20 s and 25,000 per Lagos day, ban list `private.banned_users`, removed rows backed up in `private.leaderboard_removed`).
 - `tests/`: browser test pages, `ramp-sim.js` (Node difficulty simulation) and `rls-check.ps1`. Excluded from deploys by `.vercelignore`.
 
 ## Game rules (keep these unless asked to change them)
@@ -60,7 +61,7 @@ Free, timed puzzle game for Nigerian players aged 4 to 60+, built to give every 
 Serve locally (`python -m http.server 8000` or `npx serve .`). Open `tests/track-test.html`, `tests/game-smoke.html?mode=ok|down|blocked`, `tests/admin-preview.html`; use `tests/phone.html?src=…` for a true 375 px width. Headless Chrome works too (`--headless=new --virtual-time-budget=120000 --dump-dom`; results are in the page title). Check the console for lines starting with "Brainbox Ninja:". After running `supabase/schema.sql`, run `tests/rls-check.ps1`.
 
 ## Known gaps / next steps
-- Leaderboard audit: fixed (Nov 2026). Sign-in only when a score is sent; `supabase/hardening.sql` adds the view, the checks and `submit_score()`. Highest possible total is 234,000 (26 puzzle types × 10 rounds × 900).
+- Leaderboard audit: fixed (Nov 2026). Sign-in only when a score is sent; `supabase/hardening.sql` adds the view, the checks and `submit_score()`. Highest possible total is 261,000 (29 puzzle types × 10 rounds × 900, including Naija Knowledge).
 - Leaderboard and stats are not cheat-proof: values are computed in the browser.
 - Beginner proverb levels still repeat some questions; proverbs and riddles need checking by a Nigerian reader.
 - Nicknames are not filtered; children play, so a moderation step is needed before promoting the leaderboard widely.

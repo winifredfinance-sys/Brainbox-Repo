@@ -9,12 +9,18 @@
      drawing until it gets one this player has not seen (remembering the last SEEN_KEEP_GENERATED).
    - A round never contains the same question twice. */
 import {G} from './generators.js';
+import './moreGenerators.js';
 import {pick,shuffle,mc,hq,qid} from './helpers.js';
 import {rampPicker,diffOf} from './ramp.js';
 import {PROVERBS} from '../data/proverbs.js';
 import {RIDDLES} from '../data/riddles.js';
 import {LOGIC} from '../data/logic.js';
 import {PUZZLES} from '../data/puzzles.js';
+import {PROVERBS_MORE,PROVERB_THEME} from '../data/proverbs-more.js';
+import {RIDDLES_MORE} from '../data/riddles-more.js';
+import {LOGIC_MORE} from '../data/logic-more.js';
+import {WORDQ} from '../data/words-more.js';
+import {naijaFor} from './naija.js';
 import {QUESTIONS_PER_ROUND,ROUNDS_PER_LEVEL,ADAPTIVE,SEEN_KEEP_GENERATED} from '../config/gameConfig.js';
 
 /* puzzle types for a band, plus "Mix It Up" made from all of them */
@@ -24,15 +30,23 @@ export const typeOf=(band,type)=>typesFor(band).find(c=>c.id===type);
 export const poolKey=(band,type,level)=>band+'_'+type+'_'+level;
 
 /* ---------- fixed lists as decks: each entry = the question's id and how to make it (same text as G makes) ---------- */
+const PROV=PROVERBS.concat(PROVERBS_MORE),RID=RIDDLES.concat(RIDDLES_MORE),LOG=LOGIC.concat(LOGIC_MORE);
+/* proverbs with the same theme are never options together, so only one option can be right */
+const THEME={};for(const [t,ids] of Object.entries(PROVERB_THEME))ids.split(' ').forEach(id=>THEME[id]=t);
+const otherProv=x=>shuffle(PROV.filter(p=>p!==x&&p.m!==x.m&&!(THEME[x.id]&&THEME[p.id]===THEME[x.id])));
 const full=p=>'“'+p.t.replace('___',p.a)+'”';
+const fixed=list=>list.map(x=>({key:hq(x.q+'||'),src:x.id,make:()=>mc(x.q,x.a,x.w,{why:x.why})}));
 const DECKS={
-  riddle:(lo,hi)=>RIDDLES.filter(x=>x.lv>=lo&&x.lv<=hi).map(x=>({key:hq(x.q+'||'),src:x.id,make:()=>mc(x.q,x.a,x.w,{why:x.why})})),
-  logic:(lo,hi)=>LOGIC.filter(x=>x.lv>=lo&&x.lv<=hi).map(x=>({key:hq(x.q+'||'),src:x.id,make:()=>mc(x.q,x.a,x.w,{why:x.why})})),
+  riddle:(lo,hi)=>fixed(RID.filter(x=>x.lv>=lo&&x.lv<=hi)),
+  logic:(lo,hi)=>fixed(LOG.filter(x=>x.lv>=lo&&x.lv<=hi)),
   proverb:lv=>lv===3
-    ?PROVERBS.map(x=>({key:hq('What does this proverb teach?|'+full(x)+'|'),src:x.id,make:()=>mc('What does this proverb teach?',x.m,shuffle(PROVERBS.filter(p=>p!==x)).map(p=>p.m),{show:full(x),why:'Proverb: '+x.t.replace('___',x.a)})}))
-    :(lv===1?PROVERBS.filter(p=>p.e):PROVERBS).map(x=>({key:hq('Complete the African proverb|“'+x.t+'”|'),src:x.id,make:()=>mc('Complete the African proverb',x.a,x.w,{show:'“'+x.t+'”',why:x.m})})),
-  proverbRev:lv=>(lv===1?PROVERBS.filter(p=>p.e):PROVERBS).map(x=>({key:hq('Which proverb has this meaning?|'+x.m+'|'),src:x.id,
-    make:()=>mc('Which proverb has this meaning?',full(x),shuffle(PROVERBS.filter(p=>p!==x&&p.m!==x.m)).map(full),{show:x.m,why:'Proverb: '+full(x)})}))
+    ?PROV.map(x=>({key:hq('What does this proverb teach?|'+full(x)+'|'),src:x.id,make:()=>mc('What does this proverb teach?',x.m,otherProv(x).map(p=>p.m),{show:full(x),why:'Proverb: '+x.t.replace('___',x.a)})}))
+    :(lv===1?PROV.filter(p=>p.e):PROV).map(x=>({key:hq('Complete the African proverb|“'+x.t+'”|'),src:x.id,make:()=>mc('Complete the African proverb',x.a,x.w,{show:'“'+x.t+'”',why:x.m})})),
+  proverbRev:lv=>(lv===1?PROV.filter(p=>p.e):PROV).map(x=>({key:hq('Which proverb has this meaning?|'+x.m+'|'),src:x.id,
+    make:()=>mc('Which proverb has this meaning?',full(x),otherProv(x).map(full),{show:x.m,why:'Proverb: '+full(x)})})),
+  /* word puzzles (meanings, opposites, spelling, Pidgin...) and Naija Knowledge, by level 1-3 */
+  wordQ:lv=>fixed(WORDQ.filter(x=>x.lv===lv)),
+  naija:(lv,band)=>fixed(naijaFor(band,lv))
 };
 const deckOf=sp=>DECKS[sp[0]]?DECKS[sp[0]](...sp.slice(1)):null;
 const isGenerated=sp=>!DECKS[sp[0]];
@@ -45,8 +59,9 @@ function pull(band,type,level,n,round,seen){
     if(deck){
       let fresh=deck.filter(d=>!seen.has(d.key)&&!inRound.has(d.key));
       if(!fresh.length){
-        /* this list is used up: use another list in the level that still has unseen questions, if any */
-        const others=specs.map(deckOf).filter(Boolean).some(dk=>dk.some(d=>!seen.has(d.key)&&!inRound.has(d.key)));
+        /* this list is used up: use another list in the level that still has unseen questions, or a generated
+           question type of the level (those never run out), before starting this list again */
+        const others=specs.some(isGenerated)||specs.map(deckOf).filter(Boolean).some(dk=>dk.some(d=>!seen.has(d.key)&&!inRound.has(d.key)));
         if(others&&tries<600)continue;
         deck.forEach(d=>seen.delete(d.key));fresh=deck.filter(d=>!inRound.has(d.key));   /* everything shown: start this list again */
       }

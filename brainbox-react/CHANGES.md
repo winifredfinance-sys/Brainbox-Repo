@@ -29,3 +29,11 @@ Everything else works exactly as in the current game. That covers questions, tim
 - **Duplicates kept, as flagged earlier.** 9 riddles appear twice in slightly different wording. Remove them only if you want to.
 - **Mismatched ages kept, as flagged.** The page description still says "ages 4 to 90" while the game says "4 to 60+". Tell me which to use.
 - **Supabase SQL is still to run.** `supabase/hardening.sql` (from the last change) still needs to be run once in Supabase. The React version uses the same database function, and falls back to the old method until you run it.
+
+## November 2026: bigger, harder question system
+
+- **New puzzle type: Naija Knowledge** for 11–17, 18–59 and 60+ (Beginner, Medium, Hard, 10 rounds each). Each band has its own fact list (`src/data/bands/`), plus shared easy facts and questions made from the 36 states, their capitals and zones, 80 towns and 32 places and festivals. Wrong options come from the same zone, so they are believable. 211–219 questions per band. Nothing political.
+- **New written content:** 72 proverbs, each asked 3 ways (complete it, its meaning, which proverb means this); 80 riddles; 72 logic puzzles; 120 word puzzles (meanings, opposites, spelling, plurals, Pidgin, greetings, idioms, odd one out); 72 more Nigerian words for Unscramble and Missing letter. Proverbs with the same lesson are never options in the same question.
+- **New question makers (generated):** shapes and shape patterns (4–10 and 60+), two-step sums and missing numbers (4–10), fractions (11–17), alternating, multiplying and triangle-number sequences (11–17, 18–59), multi-step mental arithmetic, estimation and ratios (18–59), rounding and doubling/halving (60+). Hard questions use the usual slips as wrong options (working left to right, adding instead of subtracting, rounding the wrong way).
+- **No repeats:** every level pool now has at least 100 questions, so a player finishes a whole level without seeing a question twice. When one list in a level runs out, the game uses the level's other question types before starting that list again.
+- **Leaderboard cap:** 29 puzzle types × 10 rounds × 900 = 261,000 (`supabase/hardening.sql`). Stats accept the new type `naija` (`supabase/schema.sql`).
